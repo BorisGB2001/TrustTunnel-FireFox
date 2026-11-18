@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extName__",
+  "version": "1.1.0",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
+  "homepage_url": "https://github.com/BorisGB2001/TrustTunnel-FireFox",
+  "icons": {
+    "48": "icons/icon-on.svg",
+    "96": "icons/icon-on.svg"
+  },
+  "permissions": [
+    "proxy",
+    "storage",
+    "alarms",
+    "privacy",
+    "tabs",
+    "webRequest",
+    "webRequestBlocking",
+    "webRequestAuthProvider"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "scripts": ["lib/i18n.js", "lib/rules.js", "lib/config.js", "background.js"]
+  },
+  "action": {
+    "default_title": "__MSG_titleOff__",
+    "default_popup": "popup/popup.html",
+    "default_icon": "icons/icon-off.svg"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "trusttunnel-firefox@borisgb2001.github.io",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}

@@ -1,0 +1,485 @@
+{
+  "extName": {
+    "message": "TrustTunnel для Firefox"
+  },
+  "extDescription": {
+    "message": "VPN-клиент TrustTunnel (AdGuard) только для Firefox: сервер как HTTPS-прокси, импорт ключей tt:// и TOML, раздельное туннелирование по сайтам."
+  },
+  "titleOff": {
+    "message": "TrustTunnel — выключен"
+  },
+  "titleOn": {
+    "message": "TrustTunnel — подключено"
+  },
+  "titleConnecting": {
+    "message": "TrustTunnel — подключение"
+  },
+  "titleError": {
+    "message": "TrustTunnel — ошибка: $1"
+  },
+  "statusOff": {
+    "message": "Выключен"
+  },
+  "statusOn": {
+    "message": "Подключено"
+  },
+  "statusConnecting": {
+    "message": "Подключение…"
+  },
+  "statusError": {
+    "message": "Ошибка"
+  },
+  "errAuth407": {
+    "message": "Сервер отклонил логин/пароль (407). Проверьте учётные данные сервера."
+  },
+  "hintCert": {
+    "message": "Firefox не доверяет сертификату сервера. Настройки → «Сертификат» у сервера → импортируйте .pem в Firefox: Настройки → Приватность и защита → Просмотр сертификатов → Центры сертификации → Импортировать, отметьте «Доверять при идентификации веб-сайтов»."
+  },
+  "hintCertDomain": {
+    "message": "Сертификат сервера выписан на другое имя — hostname должен совпадать с именем в сертификате."
+  },
+  "hintCertExpired": {
+    "message": "Срок действия сертификата сервера истёк (или неверно выставлены часы на компьютере)."
+  },
+  "hintAuth": {
+    "message": "Сервер отклонил логин/пароль (407)."
+  },
+  "hintDns": {
+    "message": "Не удаётся найти сервер по имени (DNS). Проверьте hostname."
+  },
+  "hintRefused": {
+    "message": "Сервер отклонил подключение: порт закрыт или сервис не запущен."
+  },
+  "hintTimeout": {
+    "message": "Сервер не отвечает (таймаут). Возможно, порт блокируется по пути."
+  },
+  "hintTlsReset": {
+    "message": "Сервер оборвал TLS-соединение. Возможные причины: hostname не совпадает с SNI сервера, на сервере включены правила client_random, или нет http1/http2."
+  },
+  "hintBadGateway": {
+    "message": "Сервер не смог подключиться к сайту (ошибка на стороне VPN-сервера)."
+  },
+  "errTimeout": {
+    "message": "Сервер не ответил за 10 с."
+  },
+  "errSocks": {
+    "message": "Нет связи через локальный SOCKS5 $1. Запущен ли trusttunnel_client?"
+  },
+  "errConnectGeneric": {
+    "message": "Ошибка подключения."
+  },
+  "errNetwork": {
+    "message": "Не удалось подключиться к серверу. Проверьте адрес и порт, доверие к сертификату (self-signed), логин/пароль и что на сервере включён http1 или http2."
+  },
+  "errNoServer": {
+    "message": "Не выбран сервер. Добавьте его в настройках."
+  },
+  "errHealthHttp": {
+    "message": "Проверочный запрос вернул HTTP $1."
+  },
+  "errHostRequired": {
+    "message": "Укажите домен сервера (hostname)."
+  },
+  "errCredsRequired": {
+    "message": "Укажите логин и пароль."
+  },
+  "errPort": {
+    "message": "Порт должен быть числом 1–65535."
+  },
+  "errNoSuchServer": {
+    "message": "Нет такого сервера."
+  },
+  "errEmptyDomain": {
+    "message": "Пустой домен."
+  },
+  "errNoBackground": {
+    "message": "Фоновый скрипт не ответил."
+  },
+  "errLinkBase64": {
+    "message": "Ссылка tt:// повреждена: неверный base64."
+  },
+  "errLinkTruncated": {
+    "message": "Ссылка tt:// обрезана."
+  },
+  "errNotLink": {
+    "message": "Это не ссылка tt://."
+  },
+  "errTomlMultiline": {
+    "message": "TOML: не закрыта многострочная строка."
+  },
+  "errTomlArray": {
+    "message": "TOML: не закрыт массив."
+  },
+  "errTomlValue": {
+    "message": "TOML: не удалось разобрать значение."
+  },
+  "errTomlUnexpected": {
+    "message": "TOML: неожиданный текст «$1»."
+  },
+  "errSubscriptionOnly": {
+    "message": "Конфиг содержит только subscription_url — такие ключи пока не поддерживаются."
+  },
+  "errNoHostname": {
+    "message": "В конфиге нет hostname сервера."
+  },
+  "errNoCreds": {
+    "message": "В конфиге нет username/password."
+  },
+  "errEmptyConfig": {
+    "message": "Пустой конфиг."
+  },
+  "warnSni": {
+    "message": "custom_sni ($1) Firefox не поддерживает — будет использован hostname."
+  },
+  "warnClientRandom": {
+    "message": "client_random в браузере задать нельзя: если сервер его требует, соединение не установится."
+  },
+  "warnCert": {
+    "message": "Сервер с собственным (самоподписанным) сертификатом: Firefox должен ему доверять — см. кнопку «Сертификат» у сервера."
+  },
+  "warnSkipVerify": {
+    "message": "skip_verification в браузере не работает: сертификат сервера должен быть доверенным."
+  },
+  "warnHttp3": {
+    "message": "HTTP/3 браузер к прокси не использует — на сервере должен быть включён http1 или http2."
+  },
+  "warnIpHost": {
+    "message": "hostname — IP-адрес: сервер TrustTunnel требует SNI с доменным именем, подключение может не пройти."
+  },
+  "warnSocksListener": {
+    "message": "В конфиге есть [listener.socks] $1 — можно выбрать режим «через локальный trusttunnel_client»."
+  },
+  "durSec": {
+    "message": "$1 с"
+  },
+  "durMin": {
+    "message": "$1 мин"
+  },
+  "durHour": {
+    "message": "$1 ч"
+  },
+  "ago": {
+    "message": "$1 назад"
+  },
+  "never": {
+    "message": "нет"
+  },
+  "ms": {
+    "message": "$1 мс"
+  },
+  "toastClose": {
+    "message": "Закрыть"
+  },
+  "toastCloseAll": {
+    "message": "Закрыть все уведомления"
+  },
+  "popupToggleTitle": {
+    "message": "Включить / выключить VPN"
+  },
+  "popupServer": {
+    "message": "Сервер"
+  },
+  "popupMode": {
+    "message": "Режим"
+  },
+  "modeExclude": {
+    "message": "Всё через VPN, кроме списка"
+  },
+  "modeInclude": {
+    "message": "Только сайты из списка через VPN"
+  },
+  "popupCurrentSite": {
+    "message": "Текущий сайт"
+  },
+  "statLatency": {
+    "message": "Задержка"
+  },
+  "statChecked": {
+    "message": "Проверено"
+  },
+  "statConnected": {
+    "message": "Подключено"
+  },
+  "popupCheckIp": {
+    "message": "Проверить IP"
+  },
+  "popupSettings": {
+    "message": "Настройки"
+  },
+  "popupOnlyFirefox": {
+    "message": "Только трафик Firefox · $1"
+  },
+  "popupAddServer": {
+    "message": "Добавьте сервер в настройках"
+  },
+  "popupNoServers": {
+    "message": "— нет серверов —"
+  },
+  "popupChoose": {
+    "message": "— выберите —"
+  },
+  "routeVpnOff": {
+    "message": "VPN выключен"
+  },
+  "routeVpn": {
+    "message": "через VPN"
+  },
+  "routeDirect": {
+    "message": "напрямую"
+  },
+  "siteLocal": {
+    "message": "Локальный адрес — всегда напрямую"
+  },
+  "siteIncludeRemove": {
+    "message": "Убрать $1 из списка VPN"
+  },
+  "siteIncludeAdd": {
+    "message": "Пускать $1 через VPN"
+  },
+  "siteExcludeRemove": {
+    "message": "Вернуть $1 в VPN"
+  },
+  "siteExcludeAdd": {
+    "message": "Открывать $1 напрямую"
+  },
+  "toastVpnOn": {
+    "message": "VPN включён"
+  },
+  "toastVpnOff": {
+    "message": "VPN выключен"
+  },
+  "toastServerSelected": {
+    "message": "Сервер выбран"
+  },
+  "toastServerSelectedChecked": {
+    "message": "Сервер выбран, подключение проверено"
+  },
+  "toastModeSaved": {
+    "message": "Режим сохранён"
+  },
+  "toastListUpdated": {
+    "message": "Список обновлён. Перезагрузите вкладку, чтобы применить."
+  },
+  "toastIpVpn": {
+    "message": "Внешний IP: $1 (через VPN)"
+  },
+  "toastIpDirect": {
+    "message": "Внешний IP: $1 (напрямую)"
+  },
+  "toastIpFailed": {
+    "message": "Не удалось проверить IP: $1"
+  },
+  "optIntro": {
+    "message": "VPN только для браузера. Firefox подключается к вашему серверу TrustTunnel (AdGuard) напрямую как к HTTPS-прокси — ничего устанавливать не нужно."
+  },
+  "optServers": {
+    "message": "Серверы"
+  },
+  "optAddServer": {
+    "message": "Добавить сервер"
+  },
+  "optEditServer": {
+    "message": "Изменить сервер «$1»"
+  },
+  "optKeyLabel": {
+    "message": "Ключ tt:// или конфиг TOML (trusttunnel_client.toml или экспорт trusttunnel_endpoint --format toml)"
+  },
+  "optKeyPlaceholder": {
+    "message": "tt://?AAEC…\n\nили\n\n[endpoint]\nhostname = \"vpn.example.com\"\naddresses = [\"203.0.113.10:443\"]\nusername = \"user\"\npassword = \"…\""
+  },
+  "optChooseFile": {
+    "message": "Выбрать файл…"
+  },
+  "optParse": {
+    "message": "Заполнить поля из ключа"
+  },
+  "kindDirect": {
+    "message": "Напрямую к серверу (HTTPS-прокси)"
+  },
+  "kindDirectHint": {
+    "message": "Рекомендуется. Нужен доменный hostname с доверенным сертификатом (Let's Encrypt или импортированный самоподписанный) и включённый на сервере http1 или http2."
+  },
+  "kindSocks": {
+    "message": "Через локальный trusttunnel_client (SOCKS5)"
+  },
+  "kindSocksHint": {
+    "message": "Для HTTP/3, anti-DPI, client_random. Клиент запускаете сами с секцией [listener.socks]."
+  },
+  "fName": {
+    "message": "Название"
+  },
+  "fNamePlaceholder": {
+    "message": "Например: Нидерланды"
+  },
+  "fHost": {
+    "message": "Домен сервера (hostname)"
+  },
+  "fPort": {
+    "message": "Порт"
+  },
+  "fUser": {
+    "message": "Логин"
+  },
+  "fPass": {
+    "message": "Пароль"
+  },
+  "fSHost": {
+    "message": "Адрес SOCKS5"
+  },
+  "fSPort": {
+    "message": "Порт SOCKS5"
+  },
+  "fSUser": {
+    "message": "Логин SOCKS5 (если задан)"
+  },
+  "fSPass": {
+    "message": "Пароль SOCKS5"
+  },
+  "optPassHint": {
+    "message": "Пустое поле пароля — оставить сохранённый пароль."
+  },
+  "optStorageHint": {
+    "message": "Логин и пароль хранятся только в профиле Firefox (storage.local) этого компьютера."
+  },
+  "optCancel": {
+    "message": "Отмена"
+  },
+  "optSaveServer": {
+    "message": "Сохранить сервер"
+  },
+  "optNoServers": {
+    "message": "Серверов пока нет — вставьте ключ tt:// или конфиг ниже."
+  },
+  "optUseServer": {
+    "message": "Использовать этот сервер"
+  },
+  "metaViaClient": {
+    "message": "через trusttunnel_client"
+  },
+  "metaUser": {
+    "message": "логин $1"
+  },
+  "metaOwnCert": {
+    "message": "свой сертификат"
+  },
+  "btnEdit": {
+    "message": "Изменить"
+  },
+  "btnCert": {
+    "message": "Сертификат"
+  },
+  "btnCertTitle": {
+    "message": "Сохранить сертификат сервера (.pem) для импорта в Firefox"
+  },
+  "btnDelete": {
+    "message": "Удалить"
+  },
+  "confirmDelete": {
+    "message": "Удалить сервер «$1»? Логин и пароль будут удалены."
+  },
+  "toastServerDeleted": {
+    "message": "Сервер удалён"
+  },
+  "errNoCert": {
+    "message": "У сервера нет сохранённого сертификата."
+  },
+  "toastCertSaved": {
+    "message": "Сертификат сохранён. Импортируйте его в Firefox: Настройки → Приватность и защита → Просмотр сертификатов → Центры сертификации → Импортировать, отметьте «Доверять при идентификации веб-сайтов»."
+  },
+  "warningsTitle": {
+    "message": "Обратите внимание:"
+  },
+  "errPasteKey": {
+    "message": "Вставьте ключ tt:// или конфиг TOML."
+  },
+  "toastFieldsFilled": {
+    "message": "Поля заполнены. Проверьте и нажмите «Сохранить сервер»."
+  },
+  "errFileTooBig": {
+    "message": "Файл слишком большой для конфига."
+  },
+  "toastFileRead": {
+    "message": "Конфиг прочитан из файла."
+  },
+  "toastSavedButFailed": {
+    "message": "Сервер сохранён, но подключение не прошло: $1"
+  },
+  "toastServerSaved": {
+    "message": "Сервер «$1» сохранён"
+  },
+  "toastImportCert": {
+    "message": "У сервера свой сертификат — нажмите «Сертификат» и импортируйте его в Firefox."
+  },
+  "toastSaved": {
+    "message": "Сохранено"
+  },
+  "optRouting": {
+    "message": "Маршрутизация"
+  },
+  "modeExcludeHint": {
+    "message": "Сайты из списка исключений открываются напрямую."
+  },
+  "modeIncludeHint": {
+    "message": "Остальные сайты открываются напрямую."
+  },
+  "listExclude": {
+    "message": "Исключения (напрямую)"
+  },
+  "listInclude": {
+    "message": "Только через VPN"
+  },
+  "listHint": {
+    "message": "По одному домену в строке. Домен включает все поддомены. Можно указывать IPv4 и подсети CIDR. Строки с # игнорируются."
+  },
+  "optBypassLocal": {
+    "message": "Локальные адреса (localhost, 192.168.*, 10.*, *.local) — всегда напрямую"
+  },
+  "optProtection": {
+    "message": "Защита"
+  },
+  "optKillSwitch": {
+    "message": "Kill switch: если сервер недоступен, не пускать трафик в обход VPN"
+  },
+  "optWebrtc": {
+    "message": "Защита от утечки IP через WebRTC, пока VPN включён"
+  },
+  "optDnsHint": {
+    "message": "DNS-имена сайтов через VPN разрешаются на стороне сервера (запрос CONNECT передаёт имя сайта)."
+  },
+  "optSaveSettings": {
+    "message": "Сохранить настройки"
+  },
+  "helpTitle": {
+    "message": "Если не подключается"
+  },
+  "helpCertTitle": {
+    "message": "Сертификат."
+  },
+  "helpCert": {
+    "message": "Режим «напрямую» требует, чтобы Firefox доверял сертификату сервера. С Let's Encrypt всё работает сразу. Для самоподписанного: нажмите «Сертификат» у сервера, затем Настройки Firefox → Приватность и защита → Просмотр сертификатов → Центры сертификации → Импортировать и отметьте «Доверять при идентификации веб-сайтов». Кнопки «Принять риск» на странице предупреждения для прокси недостаточно."
+  },
+  "helpDomainTitle": {
+    "message": "Домен, а не IP."
+  },
+  "helpDomain": {
+    "message": "Сервер проверяет SNI, поэтому hostname должен быть доменом из hosts.toml, и он должен резолвиться в адрес сервера."
+  },
+  "helpProtoTitle": {
+    "message": "Протокол."
+  },
+  "helpProto": {
+    "message": "Firefox говорит с прокси по HTTP/1.1 или HTTP/2. В vpn.toml сервера должна быть секция [listen_protocols.http1] или [listen_protocols.http2], не только quic."
+  },
+  "helpRulesTitle": {
+    "message": "Правила anti-probing."
+  },
+  "helpRules": {
+    "message": "Если в rules.toml сервера заданы client_random_prefix, браузер их выполнить не может — используйте режим SOCKS5."
+  },
+  "helpSocksTitle": {
+    "message": "SOCKS5."
+  },
+  "helpSocks": {
+    "message": "Добавьте в trusttunnel_client.toml секцию [listener.socks] с address = \"127.0.0.1:1080\" и запустите trusttunnel_client --config trusttunnel_client.toml."
+  }
+}

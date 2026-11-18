@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TrustTunnel</title>
+  <link rel="stylesheet" href="../lib/common.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="row">
+    <img src="../icons/icon-on.svg" width="22" height="22" alt="">
+    <strong class="grow">TrustTunnel</strong>
+    <label class="switch" data-i18n-title="popupToggleTitle">
+      <input type="checkbox" id="toggle">
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <section class="status" id="statusBox">
+    <div class="dot" id="dot"></div>
+    <div class="grow">
+      <div id="statusText"></div>
+      <div class="small muted" id="statusSub"></div>
+    </div>
+  </section>
+
+  <label class="field">
+    <span class="small muted" data-i18n="popupServer"></span>
+    <select id="profile"></select>
+  </label>
+
+  <label class="field">
+    <span class="small muted" data-i18n="popupMode"></span>
+    <select id="mode">
+      <option value="exclude" data-i18n="modeExclude"></option>
+      <option value="include" data-i18n="modeInclude"></option>
+    </select>
+  </label>
+
+  <section class="site" id="siteBox" hidden>
+    <div class="small muted" data-i18n="popupCurrentSite"></div>
+    <div class="row">
+      <span class="grow host" id="siteHost"></span>
+      <span class="pill" id="siteRoute"></span>
+    </div>
+    <button type="button" id="siteBtn"></button>
+  </section>
+
+  <section class="stats" id="stats" hidden>
+    <div><span class="muted small" data-i18n="statLatency"></span><br><span id="lat">—</span></div>
+    <div><span class="muted small" data-i18n="statChecked"></span><br><span id="chk">—</span></div>
+    <div><span class="muted small" data-i18n="statConnected"></span><br><span id="since">—</span></div>
+  </section>
+
+  <footer class="row">
+    <button type="button" id="ipBtn" data-i18n="popupCheckIp"></button>
+    <span class="grow"></span>
+    <button type="button" id="optBtn" data-i18n="popupSettings"></button>
+  </footer>
+
+  <script src="../lib/i18n.js"></script>
+  <script src="../lib/rules.js"></script>
+  <script src="../lib/api.js"></script>
+  <script src="../lib/toast.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

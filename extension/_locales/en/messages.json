@@ -1,0 +1,485 @@
+{
+  "extName": {
+    "message": "TrustTunnel for Firefox"
+  },
+  "extDescription": {
+    "message": "Browser-only VPN client for TrustTunnel (AdGuard) servers: connects as an HTTPS proxy, imports tt:// keys and TOML configs, per-site split tunneling."
+  },
+  "titleOff": {
+    "message": "TrustTunnel — off"
+  },
+  "titleOn": {
+    "message": "TrustTunnel — connected"
+  },
+  "titleConnecting": {
+    "message": "TrustTunnel — connecting"
+  },
+  "titleError": {
+    "message": "TrustTunnel — error: $1"
+  },
+  "statusOff": {
+    "message": "Off"
+  },
+  "statusOn": {
+    "message": "Connected"
+  },
+  "statusConnecting": {
+    "message": "Connecting…"
+  },
+  "statusError": {
+    "message": "Error"
+  },
+  "errAuth407": {
+    "message": "The server rejected the username/password (407). Check the server credentials."
+  },
+  "hintCert": {
+    "message": "Firefox does not trust the server certificate. Settings → “Certificate” next to the server → import the .pem in Firefox: Settings → Privacy & Security → View Certificates → Authorities → Import, and tick “Trust this CA to identify websites”."
+  },
+  "hintCertDomain": {
+    "message": "The server certificate is issued for another name — the hostname must match the certificate."
+  },
+  "hintCertExpired": {
+    "message": "The server certificate has expired (or the computer clock is wrong)."
+  },
+  "hintAuth": {
+    "message": "The server rejected the username/password (407)."
+  },
+  "hintDns": {
+    "message": "Cannot resolve the server name (DNS). Check the hostname."
+  },
+  "hintRefused": {
+    "message": "The server refused the connection: the port is closed or the service is not running."
+  },
+  "hintTimeout": {
+    "message": "The server does not respond (timeout). The port may be blocked on the way."
+  },
+  "hintTlsReset": {
+    "message": "The server dropped the TLS connection. Possible causes: the hostname does not match the server SNI, client_random rules are enabled on the server, or http1/http2 is disabled."
+  },
+  "hintBadGateway": {
+    "message": "The server could not reach the site (error on the VPN server side)."
+  },
+  "errTimeout": {
+    "message": "The server did not respond within 10 s."
+  },
+  "errSocks": {
+    "message": "No connection through local SOCKS5 $1. Is trusttunnel_client running?"
+  },
+  "errConnectGeneric": {
+    "message": "Connection error."
+  },
+  "errNetwork": {
+    "message": "Could not connect to the server. Check the address and port, trust in the (self-signed) certificate, the username/password, and that http1 or http2 is enabled on the server."
+  },
+  "errNoServer": {
+    "message": "No server selected. Add one in the settings."
+  },
+  "errHealthHttp": {
+    "message": "The check request returned HTTP $1."
+  },
+  "errHostRequired": {
+    "message": "Enter the server domain (hostname)."
+  },
+  "errCredsRequired": {
+    "message": "Enter the username and password."
+  },
+  "errPort": {
+    "message": "Port must be a number 1–65535."
+  },
+  "errNoSuchServer": {
+    "message": "No such server."
+  },
+  "errEmptyDomain": {
+    "message": "Empty domain."
+  },
+  "errNoBackground": {
+    "message": "The background script did not respond."
+  },
+  "errLinkBase64": {
+    "message": "The tt:// link is corrupted: invalid base64."
+  },
+  "errLinkTruncated": {
+    "message": "The tt:// link is truncated."
+  },
+  "errNotLink": {
+    "message": "This is not a tt:// link."
+  },
+  "errTomlMultiline": {
+    "message": "TOML: unterminated multi-line string."
+  },
+  "errTomlArray": {
+    "message": "TOML: unterminated array."
+  },
+  "errTomlValue": {
+    "message": "TOML: cannot parse a value."
+  },
+  "errTomlUnexpected": {
+    "message": "TOML: unexpected text “$1”."
+  },
+  "errSubscriptionOnly": {
+    "message": "The config only contains subscription_url — such keys are not supported yet."
+  },
+  "errNoHostname": {
+    "message": "The config has no server hostname."
+  },
+  "errNoCreds": {
+    "message": "The config has no username/password."
+  },
+  "errEmptyConfig": {
+    "message": "Empty config."
+  },
+  "warnSni": {
+    "message": "Firefox cannot use custom_sni ($1) — the hostname will be used instead."
+  },
+  "warnClientRandom": {
+    "message": "client_random cannot be set in a browser: if the server requires it, the connection will fail."
+  },
+  "warnCert": {
+    "message": "The server uses its own (self-signed) certificate: Firefox must trust it — see “Certificate” next to the server."
+  },
+  "warnSkipVerify": {
+    "message": "skip_verification does not work in a browser: the server certificate must be trusted."
+  },
+  "warnHttp3": {
+    "message": "Browsers do not use HTTP/3 for proxies — http1 or http2 must be enabled on the server."
+  },
+  "warnIpHost": {
+    "message": "The hostname is an IP address: TrustTunnel requires SNI with a domain name, the connection may fail."
+  },
+  "warnSocksListener": {
+    "message": "The config has [listener.socks] $1 — you can use the “via local trusttunnel_client” mode."
+  },
+  "durSec": {
+    "message": "$1 s"
+  },
+  "durMin": {
+    "message": "$1 min"
+  },
+  "durHour": {
+    "message": "$1 h"
+  },
+  "ago": {
+    "message": "$1 ago"
+  },
+  "never": {
+    "message": "never"
+  },
+  "ms": {
+    "message": "$1 ms"
+  },
+  "toastClose": {
+    "message": "Close"
+  },
+  "toastCloseAll": {
+    "message": "Close all notifications"
+  },
+  "popupToggleTitle": {
+    "message": "Turn VPN on / off"
+  },
+  "popupServer": {
+    "message": "Server"
+  },
+  "popupMode": {
+    "message": "Mode"
+  },
+  "modeExclude": {
+    "message": "Everything via VPN except the list"
+  },
+  "modeInclude": {
+    "message": "Only listed sites via VPN"
+  },
+  "popupCurrentSite": {
+    "message": "Current site"
+  },
+  "statLatency": {
+    "message": "Latency"
+  },
+  "statChecked": {
+    "message": "Checked"
+  },
+  "statConnected": {
+    "message": "Connected for"
+  },
+  "popupCheckIp": {
+    "message": "Check IP"
+  },
+  "popupSettings": {
+    "message": "Settings"
+  },
+  "popupOnlyFirefox": {
+    "message": "Firefox traffic only · $1"
+  },
+  "popupAddServer": {
+    "message": "Add a server in the settings"
+  },
+  "popupNoServers": {
+    "message": "— no servers —"
+  },
+  "popupChoose": {
+    "message": "— choose —"
+  },
+  "routeVpnOff": {
+    "message": "VPN is off"
+  },
+  "routeVpn": {
+    "message": "via VPN"
+  },
+  "routeDirect": {
+    "message": "direct"
+  },
+  "siteLocal": {
+    "message": "Local address — always direct"
+  },
+  "siteIncludeRemove": {
+    "message": "Remove $1 from the VPN list"
+  },
+  "siteIncludeAdd": {
+    "message": "Route $1 via VPN"
+  },
+  "siteExcludeRemove": {
+    "message": "Route $1 via VPN again"
+  },
+  "siteExcludeAdd": {
+    "message": "Open $1 directly"
+  },
+  "toastVpnOn": {
+    "message": "VPN is on"
+  },
+  "toastVpnOff": {
+    "message": "VPN is off"
+  },
+  "toastServerSelected": {
+    "message": "Server selected"
+  },
+  "toastServerSelectedChecked": {
+    "message": "Server selected, connection checked"
+  },
+  "toastModeSaved": {
+    "message": "Mode saved"
+  },
+  "toastListUpdated": {
+    "message": "List updated. Reload the tab to apply."
+  },
+  "toastIpVpn": {
+    "message": "External IP: $1 (via VPN)"
+  },
+  "toastIpDirect": {
+    "message": "External IP: $1 (direct)"
+  },
+  "toastIpFailed": {
+    "message": "Could not check the IP: $1"
+  },
+  "optIntro": {
+    "message": "Browser-only VPN. Firefox connects to your TrustTunnel (AdGuard) server directly as an HTTPS proxy — nothing else to install."
+  },
+  "optServers": {
+    "message": "Servers"
+  },
+  "optAddServer": {
+    "message": "Add server"
+  },
+  "optEditServer": {
+    "message": "Edit server “$1”"
+  },
+  "optKeyLabel": {
+    "message": "tt:// key or TOML config (trusttunnel_client.toml or trusttunnel_endpoint --format toml export)"
+  },
+  "optKeyPlaceholder": {
+    "message": "tt://?AAEC…\n\nor\n\n[endpoint]\nhostname = \"vpn.example.com\"\naddresses = [\"203.0.113.10:443\"]\nusername = \"user\"\npassword = \"…\""
+  },
+  "optChooseFile": {
+    "message": "Choose file…"
+  },
+  "optParse": {
+    "message": "Fill in fields from key"
+  },
+  "kindDirect": {
+    "message": "Directly to the server (HTTPS proxy)"
+  },
+  "kindDirectHint": {
+    "message": "Recommended. Needs a domain hostname with a trusted certificate (Let's Encrypt, or an imported self-signed one) and http1 or http2 enabled on the server."
+  },
+  "kindSocks": {
+    "message": "Via local trusttunnel_client (SOCKS5)"
+  },
+  "kindSocksHint": {
+    "message": "For HTTP/3, anti-DPI, client_random. You run the client yourself with a [listener.socks] section."
+  },
+  "fName": {
+    "message": "Name"
+  },
+  "fNamePlaceholder": {
+    "message": "e.g. Netherlands"
+  },
+  "fHost": {
+    "message": "Server domain (hostname)"
+  },
+  "fPort": {
+    "message": "Port"
+  },
+  "fUser": {
+    "message": "Username"
+  },
+  "fPass": {
+    "message": "Password"
+  },
+  "fSHost": {
+    "message": "SOCKS5 address"
+  },
+  "fSPort": {
+    "message": "SOCKS5 port"
+  },
+  "fSUser": {
+    "message": "SOCKS5 username (if set)"
+  },
+  "fSPass": {
+    "message": "SOCKS5 password"
+  },
+  "optPassHint": {
+    "message": "Leave the password empty to keep the saved one."
+  },
+  "optStorageHint": {
+    "message": "Credentials are stored in this Firefox profile (storage.local) only."
+  },
+  "optCancel": {
+    "message": "Cancel"
+  },
+  "optSaveServer": {
+    "message": "Save server"
+  },
+  "optNoServers": {
+    "message": "No servers yet — paste a tt:// key or a config below."
+  },
+  "optUseServer": {
+    "message": "Use this server"
+  },
+  "metaViaClient": {
+    "message": "via trusttunnel_client"
+  },
+  "metaUser": {
+    "message": "user $1"
+  },
+  "metaOwnCert": {
+    "message": "own certificate"
+  },
+  "btnEdit": {
+    "message": "Edit"
+  },
+  "btnCert": {
+    "message": "Certificate"
+  },
+  "btnCertTitle": {
+    "message": "Save the server certificate (.pem) to import into Firefox"
+  },
+  "btnDelete": {
+    "message": "Delete"
+  },
+  "confirmDelete": {
+    "message": "Delete server “$1”? Its username and password will be removed."
+  },
+  "toastServerDeleted": {
+    "message": "Server deleted"
+  },
+  "errNoCert": {
+    "message": "This server has no saved certificate."
+  },
+  "toastCertSaved": {
+    "message": "Certificate saved. Import it in Firefox: Settings → Privacy & Security → View Certificates → Authorities → Import, tick “Trust this CA to identify websites”."
+  },
+  "warningsTitle": {
+    "message": "Please note:"
+  },
+  "errPasteKey": {
+    "message": "Paste a tt:// key or a TOML config."
+  },
+  "toastFieldsFilled": {
+    "message": "Fields filled in. Check them and click “Save server”."
+  },
+  "errFileTooBig": {
+    "message": "The file is too large for a config."
+  },
+  "toastFileRead": {
+    "message": "Config loaded from file."
+  },
+  "toastSavedButFailed": {
+    "message": "Server saved, but the connection failed: $1"
+  },
+  "toastServerSaved": {
+    "message": "Server “$1” saved"
+  },
+  "toastImportCert": {
+    "message": "This server has its own certificate — click “Certificate” and import it into Firefox."
+  },
+  "toastSaved": {
+    "message": "Saved"
+  },
+  "optRouting": {
+    "message": "Routing"
+  },
+  "modeExcludeHint": {
+    "message": "Sites from the exclusion list open directly."
+  },
+  "modeIncludeHint": {
+    "message": "All other sites open directly."
+  },
+  "listExclude": {
+    "message": "Exclusions (direct)"
+  },
+  "listInclude": {
+    "message": "Only via VPN"
+  },
+  "listHint": {
+    "message": "One domain per line. A domain includes all its subdomains. IPv4 addresses and CIDR subnets are allowed. Lines starting with # are ignored."
+  },
+  "optBypassLocal": {
+    "message": "Local addresses (localhost, 192.168.*, 10.*, *.local) — always direct"
+  },
+  "optProtection": {
+    "message": "Protection"
+  },
+  "optKillSwitch": {
+    "message": "Kill switch: if the server is unreachable, do not let traffic bypass the VPN"
+  },
+  "optWebrtc": {
+    "message": "Prevent IP leaks through WebRTC while the VPN is on"
+  },
+  "optDnsHint": {
+    "message": "Names of sites routed via VPN are resolved on the server side (the CONNECT request carries the site name)."
+  },
+  "optSaveSettings": {
+    "message": "Save settings"
+  },
+  "helpTitle": {
+    "message": "Troubleshooting"
+  },
+  "helpCertTitle": {
+    "message": "Certificate."
+  },
+  "helpCert": {
+    "message": "Direct mode requires Firefox to trust the server certificate. Let's Encrypt works out of the box. For a self-signed one: click “Certificate” next to the server, then Firefox Settings → Privacy & Security → View Certificates → Authorities → Import, and tick “Trust this CA to identify websites”. Accepting the risk on a warning page is not enough for proxies."
+  },
+  "helpDomainTitle": {
+    "message": "A domain, not an IP."
+  },
+  "helpDomain": {
+    "message": "The server checks SNI, so the hostname must be a domain from hosts.toml that resolves to the server address."
+  },
+  "helpProtoTitle": {
+    "message": "Protocol."
+  },
+  "helpProto": {
+    "message": "Firefox talks to proxies over HTTP/1.1 or HTTP/2. The server vpn.toml must have [listen_protocols.http1] or [listen_protocols.http2], not only quic."
+  },
+  "helpRulesTitle": {
+    "message": "Anti-probing rules."
+  },
+  "helpRules": {
+    "message": "If the server rules.toml uses client_random_prefix, a browser cannot satisfy it — use the SOCKS5 mode."
+  },
+  "helpSocksTitle": {
+    "message": "SOCKS5."
+  },
+  "helpSocks": {
+    "message": "Add a [listener.socks] section with address = \"127.0.0.1:1080\" to trusttunnel_client.toml and run trusttunnel_client --config trusttunnel_client.toml."
+  }
+}
