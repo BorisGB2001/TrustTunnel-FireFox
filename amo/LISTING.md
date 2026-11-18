@@ -1,6 +1,6 @@
 # AMO listing — TrustTunnel Browser Client
 
-Copy these texts into the Developer Hub form (addons.mozilla.org → Developer Hub → the add-on → Edit Product Page). The default locale is English (en-US); the Russian texts go in as a translation (“Manage Translations” → Русский).
+Copy these texts into the Developer Hub form (descriptions are Markdown) (addons.mozilla.org → Developer Hub → the add-on → Edit Product Page). The default locale is English (en-US); the Russian texts go in as a translation (“Manage Translations” → Русский).
 
 ## Basic info
 
@@ -30,23 +30,23 @@ VPN-клиент для вашего сервера TrustTunnel (AdGuard), то�
 
 TrustTunnel Browser Client connects Firefox to your own TrustTunnel server — the open-source VPN protocol by AdGuard. Only browser traffic goes through the tunnel; the rest of your system is untouched, and nothing needs to be installed besides the extension.
 
-<b>You need your own TrustTunnel server.</b> This add-on does not provide a VPN service.
+**You need your own TrustTunnel server.** This add-on does not provide a VPN service.
 
-<b>Features</b>
-<ul>
-<li>Import a tt:// key, a trusttunnel_client.toml config or a server export — or enter the server manually</li>
-<li>Several servers, switchable from the toolbar</li>
-<li>Split tunneling: everything except a list, or only listed sites; domains, IPs and subnets; one click to send the current site directly or via VPN</li>
-<li>Kill switch: if the server is down, traffic does not bypass the VPN</li>
-<li>WebRTC IP leak protection while the VPN is on</li>
-<li>Connection check with latency and clear error messages</li>
-<li>Exports a self-signed server certificate so you can trust it in Firefox</li>
-<li>Optional mode via the local SOCKS5 listener of the official trusttunnel_client</li>
-</ul>
+**Features**
 
-<b>Server requirements</b>: a domain name (not a bare IP), a certificate Firefox trusts (Let's Encrypt, or an imported self-signed one), and HTTP/1.1 or HTTP/2 enabled on the server.
+- Import a tt:// key, a trusttunnel_client.toml config or a server export — or enter the server manually
+- Several servers, switchable from the toolbar
+- Split tunneling: everything except a list, or only listed sites; domains, IPs and subnets; one click to send the current site directly or via VPN
+- Kill switch: if the server is down, traffic does not bypass the VPN
+- WebRTC IP leak protection while the VPN is on
+- Connection check with latency and clear error messages
+- Exports a self-signed server certificate so you can trust it in Firefox
+- Optional mode via the local SOCKS5 listener of the official trusttunnel_client
 
-<b>Privacy</b>: no data collection. Your credentials stay in your Firefox profile and are sent only to your own server.
+
+**Server requirements**: a domain name (not a bare IP), a certificate Firefox trusts (Let's Encrypt, or an imported self-signed one), and HTTP/1.1 or HTTP/2 enabled on the server.
+
+**Privacy**: no data collection. Your credentials stay in your Firefox profile and are sent only to your own server.
 
 Open source (MIT): https://github.com/BorisGB2001/TrustTunnel-FireFox
 This is an unofficial project, not affiliated with AdGuard.
@@ -55,23 +55,23 @@ This is an unofficial project, not affiliated with AdGuard.
 
 TrustTunnel — клиент для браузера подключает Firefox к вашему собственному серверу TrustTunnel — открытому VPN-протоколу AdGuard. Через туннель идёт только трафик браузера, остальная система не затрагивается. Кроме расширения ничего устанавливать не нужно.
 
-<b>Нужен свой сервер TrustTunnel.</b> Расширение не предоставляет VPN-сервис.
+**Нужен свой сервер TrustTunnel.** Расширение не предоставляет VPN-сервис.
 
-<b>Возможности</b>
-<ul>
-<li>Импорт ключа tt://, конфига trusttunnel_client.toml или экспорта сервера, либо ручной ввод</li>
-<li>Несколько серверов с переключением с панели инструментов</li>
-<li>Раздельное туннелирование: всё, кроме списка, или только сайты из списка; домены, IP и подсети; текущий сайт — напрямую или через VPN одним нажатием</li>
-<li>Kill switch: если сервер недоступен, трафик не идёт в обход VPN</li>
-<li>Защита от утечки IP через WebRTC, пока VPN включён</li>
-<li>Проверка связи с задержкой и понятными сообщениями об ошибках</li>
-<li>Выгрузка самоподписанного сертификата сервера для импорта в Firefox</li>
-<li>Режим через локальный SOCKS5 официального trusttunnel_client</li>
-</ul>
+**Возможности**
 
-<b>Требования к серверу</b>: доменное имя (не голый IP), сертификат, которому доверяет Firefox (Let's Encrypt или импортированный самоподписанный), и включённый HTTP/1.1 или HTTP/2.
+- Импорт ключа tt://, конфига trusttunnel_client.toml или экспорта сервера, либо ручной ввод
+- Несколько серверов с переключением с панели инструментов
+- Раздельное туннелирование: всё, кроме списка, или только сайты из списка; домены, IP и подсети; текущий сайт — напрямую или через VPN одним нажатием
+- Kill switch: если сервер недоступен, трафик не идёт в обход VPN
+- Защита от утечки IP через WebRTC, пока VPN включён
+- Проверка связи с задержкой и понятными сообщениями об ошибках
+- Выгрузка самоподписанного сертификата сервера для импорта в Firefox
+- Режим через локальный SOCKS5 официального trusttunnel_client
 
-<b>Конфиденциальность</b>: данные не собираются. Логин и пароль хранятся в профиле Firefox и отправляются только на ваш сервер.
+
+**Требования к серверу**: доменное имя (не голый IP), сертификат, которому доверяет Firefox (Let's Encrypt или импортированный самоподписанный), и включённый HTTP/1.1 или HTTP/2.
+
+**Конфиденциальность**: данные не собираются. Логин и пароль хранятся в профиле Firefox и отправляются только на ваш сервер.
 
 Открытый код (MIT): https://github.com/BorisGB2001/TrustTunnel-FireFox
 Неофициальный проект, не связан с AdGuard.
