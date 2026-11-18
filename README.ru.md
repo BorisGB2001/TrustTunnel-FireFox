@@ -1,6 +1,6 @@
-# TrustTunnel для Firefox
+# TrustTunnel — клиент для браузера
 
-VPN-клиент для [TrustTunnel](https://github.com/TrustTunnel/TrustTunnel) — открытого VPN-протокола AdGuard — только для браузера. Через ваш сервер TrustTunnel идёт только трафик Firefox, остальная система не затрагивается.
+Расширение Firefox: VPN-клиент для [TrustTunnel](https://github.com/TrustTunnel/TrustTunnel) — открытого VPN-протокола AdGuard — только для браузера. Через ваш сервер TrustTunnel идёт только трафик Firefox, остальная система не затрагивается.
 
 [English version](README.md)
 

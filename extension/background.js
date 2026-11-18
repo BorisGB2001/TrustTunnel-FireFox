@@ -1,5 +1,5 @@
 /*
- * TrustTunnel for Firefox — background (event page).
+ * TrustTunnel Browser Client — background (event page).
  *
  * TrustTunnel is HTTP CONNECT over TLS with Basic auth, so Firefox talks to the
  * server itself as to an HTTPS proxy (proxy.onRequest -> type "https").

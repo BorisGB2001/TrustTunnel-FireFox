@@ -1,6 +1,6 @@
-# TrustTunnel for Firefox
+# TrustTunnel Browser Client
 
-A browser-only VPN client for [TrustTunnel](https://github.com/TrustTunnel/TrustTunnel), the open-source VPN protocol by AdGuard. Only Firefox traffic goes through your TrustTunnel server; the rest of the system is untouched.
+A Firefox extension: browser-only VPN client for [TrustTunnel](https://github.com/TrustTunnel/TrustTunnel), the open-source VPN protocol by AdGuard. Only Firefox traffic goes through your TrustTunnel server; the rest of the system is untouched.
 
 [Русская версия](README.ru.md)
 

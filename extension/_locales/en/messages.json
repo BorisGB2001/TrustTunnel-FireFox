@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "TrustTunnel for Firefox"
+    "message": "TrustTunnel Browser Client"
   },
   "extDescription": {
     "message": "Browser-only VPN client for TrustTunnel (AdGuard) servers: connects as an HTTPS proxy, imports tt:// keys and TOML configs, per-site split tunneling."
