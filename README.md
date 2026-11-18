@@ -93,6 +93,8 @@ The extension collects no data. Server credentials are stored only in your Firef
 - the connectivity check `https://www.gstatic.com/generate_204`, sent through your tunnel;
 - the **Check IP** button, which queries `https://api.ipify.org`.
 
+Full text: [PRIVACY.md](PRIVACY.md).
+
 ## License
 
 [MIT](LICENSE)
