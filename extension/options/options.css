@@ -38,3 +38,13 @@ pre { background: var(--bg-soft); border-radius: 8px; padding: 12px; max-height:
 .warnings ul { margin: 4px 0 0; padding-left: 18px; }
 .help { padding-left: 18px; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .badge { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--bg-soft); color: var(--muted); margin-left: 6px; font-weight: 400; }
+
+.sub { margin: 8px 0 0 26px; padding: 10px 12px; border-left: 3px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+label.inline { flex-direction: row; align-items: center; gap: 8px; }
+label.inline select { width: auto; }
+.containers { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; }
+.containers label { flex-direction: row; align-items: center; gap: 6px; }
+.cdot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.ok-text { color: var(--ok); }
+.err-text { color: var(--err); }
+@media (max-width: 640px) { .sub { margin-left: 0; } }

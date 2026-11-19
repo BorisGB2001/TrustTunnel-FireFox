@@ -62,6 +62,36 @@
   </section>
 
   <section class="card">
+    <h2 data-i18n="optScope"></h2>
+    <div class="modes">
+      <label class="radio"><input type="radio" name="scope" value="all"> <span><b data-i18n="scopeAll"></b><br><span class="muted small" data-i18n="scopeAllHint"></span></span></label>
+      <label class="radio"><input type="radio" name="scope" value="tabs"> <span><b data-i18n="scopeTabs"></b><br><span class="muted small" data-i18n="scopeTabsHint"></span></span></label>
+      <label class="radio"><input type="radio" name="scope" value="private"> <span><b data-i18n="scopePrivate"></b><br><span class="muted small" data-i18n="scopePrivateHint"></span></span></label>
+    </div>
+
+    <div class="sub" id="tabsOpts">
+      <label class="check"><input type="checkbox" id="inheritOpener"> <span data-i18n="optInheritOpener"></span></label>
+      <label class="inline"><span data-i18n="optTabless"></span>
+        <select id="tablessRoute">
+          <option value="direct" data-i18n="tablessDirect"></option>
+          <option value="vpn" data-i18n="tablessVpn"></option>
+        </select>
+      </label>
+      <div>
+        <div><b data-i18n="optContainers"></b></div>
+        <div class="muted small" data-i18n="optContainersHint"></div>
+        <div id="containers" class="containers"></div>
+      </div>
+    </div>
+
+    <div class="sub" id="privateOpts">
+      <div id="privStatus" class="small"></div>
+    </div>
+
+    <p class="muted small" id="hotkeys"></p>
+  </section>
+
+  <section class="card">
     <h2 data-i18n="optRouting"></h2>
     <div class="modes">
       <label class="radio"><input type="radio" name="mode" value="exclude"> <span><b data-i18n="modeExclude"></b><br><span class="muted small" data-i18n="modeExcludeHint"></span></span></label>
@@ -104,6 +134,7 @@
 
 <script src="../lib/i18n.js"></script>
 <script src="../lib/rules.js"></script>
+<script src="../lib/scope.js"></script>
 <script src="../lib/config.js"></script>
 <script src="../lib/api.js"></script>
 <script src="../lib/toast.js"></script>

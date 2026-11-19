@@ -252,9 +252,75 @@ $("saveProfileBtn").addEventListener("click", async () => {
 
 // ------------------------------------------------------------------ settings form
 
+// ------------------------------------------------------------------ VPN scope
+
+function selectedScope() {
+  return document.querySelector('input[name="scope"]:checked')?.value || "all";
+}
+
+function syncScope() {
+  const scope = selectedScope();
+  $("tabsOpts").hidden = scope !== "tabs";
+  $("privateOpts").hidden = scope !== "private";
+}
+for (const r of document.querySelectorAll('input[name="scope"]')) r.addEventListener("change", syncScope);
+
+async function renderContainers() {
+  const root = $("containers");
+  root.textContent = "";
+  let list = null;
+  try {
+    list = await browser.contextualIdentities.query({});
+  } catch (_) {}
+  if (!Array.isArray(list)) {
+    root.append(el("div", "muted small", t("containersOff")));
+    return;
+  }
+  if (!list.length) {
+    root.append(el("div", "muted small", t("containersNone")));
+    return;
+  }
+  const chosen = new Set(state.settings.vpnContainers || []);
+  for (const c of list) {
+    const label = el("label");
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.className = "container-box";
+    box.value = c.cookieStoreId;
+    box.checked = chosen.has(c.cookieStoreId);
+    const dot = el("span", "cdot");
+    dot.style.background = c.colorCode || "#888";
+    label.append(box, dot, el("span", "", c.name));
+    root.append(label);
+  }
+}
+
+async function renderPrivateStatus() {
+  const box = $("privStatus");
+  let allowed = false;
+  try {
+    allowed = await browser.extension.isAllowedIncognitoAccess();
+  } catch (_) {}
+  box.textContent = "";
+  box.append(el("span", allowed ? "ok-text" : "err-text", t(allowed ? "privAllowed" : "privNotAllowed")));
+}
+
+async function renderHotkeys() {
+  let cmds = [];
+  try {
+    cmds = await browser.commands.getAll();
+  } catch (_) {}
+  const parts = cmds.filter((c) => c.shortcut).map((c) => c.shortcut + " — " + c.description);
+  $("hotkeys").textContent = (parts.length ? t("hotkeysList", parts.join("; ")) + " " : "") + t("hotkeysHint");
+}
+
 function fillSettings() {
   const s = state.settings;
   for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === s.mode;
+  for (const r of document.querySelectorAll('input[name="scope"]')) r.checked = r.value === (s.scope || "all");
+  $("inheritOpener").checked = s.inheritOpener !== false;
+  $("tablessRoute").value = s.tablessRoute === "vpn" ? "vpn" : "direct";
+  syncScope();
   $("excludeList").value = s.excludeList.join("\n");
   $("includeList").value = s.includeList.join("\n");
   for (const k of ["bypassLocal", "killSwitch", "webrtcProtect"]) $(k).checked = !!s[k];
@@ -267,6 +333,11 @@ $("saveBtn").addEventListener("click", async () => {
     includeList: TTRules.parseList($("includeList").value),
   };
   for (const k of ["bypassLocal", "killSwitch", "webrtcProtect"]) patch[k] = $(k).checked;
+  patch.scope = selectedScope();
+  patch.inheritOpener = $("inheritOpener").checked;
+  patch.tablessRoute = $("tablessRoute").value;
+  const boxes = [...document.querySelectorAll(".container-box")];
+  if (boxes.length) patch.vpnContainers = boxes.filter((b) => b.checked).map((b) => b.value);
   try {
     state = await api("setSettings", { patch });
     fillSettings();
@@ -291,6 +362,7 @@ browser.runtime.onMessage.addListener((msg) => {
     state = await api("getState");
     fillSettings();
     renderProfiles();
+    await Promise.all([renderContainers(), renderPrivateStatus(), renderHotkeys()]);
   } catch (e) {
     Toast.error(e.message);
   }

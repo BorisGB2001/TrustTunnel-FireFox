@@ -4,22 +4,31 @@
  * TrustTunnel is HTTP CONNECT over TLS with Basic auth, so Firefox talks to the
  * server itself as to an HTTPS proxy (proxy.onRequest -> type "https").
  * Alternative: the local SOCKS5 listener of the official trusttunnel_client.
+ *
+ * Routing of a request = scope (all tabs / marked tabs + containers / private
+ * windows, lib/scope.js) AND site lists (lib/rules.js).
  */
 "use strict";
 
 const HEALTH_ALARM = "tt-health";
 const HEALTH_URL = "https://www.gstatic.com/generate_204";
+const IP_URL = "https://api.ipify.org/?format=json";
+const IP_NONCE_RE = /[?&]tt-ip=([a-z0-9]+)/;
 
 const DEFAULTS = {
   enabled: false,
   profileId: null,
   profiles: [], // [{id, kind:"direct"|"socks", name, hostname, port, username, password, socksHost, socksPort, ...}]
-  mode: "exclude",
+  mode: "exclude", // site lists: "exclude" | "include"
   excludeList: [],
   includeList: [],
   bypassLocal: true,
   killSwitch: true,
   webrtcProtect: true,
+  scope: "all", // where the VPN works: "all" | "tabs" | "private"
+  inheritOpener: true, // tabs opened from a VPN tab get VPN too
+  tablessRoute: "direct", // requests without a tab in "tabs" scope: "direct" | "vpn"
+  vpnContainers: [], // cookieStoreIds whose tabs always use the VPN in "tabs" scope
 };
 
 let settings = { ...DEFAULTS };
@@ -27,12 +36,24 @@ let rt = { status: "off", error: null, latency: null, checkedAt: null, since: nu
 let healthNonce = null; // marks our own health-check request
 let authFails = 0;
 
+// Tabs marked "VPN in this tab". Kept in storage.session: survives a restart of the
+// background page, not of the browser (tab ids change then anyway).
+const vpnTabs = new Set();
+// tabId -> Promise of the one-time "inherit VPN from the opener tab" check.
+const openerChecks = new Map();
+// nonce -> request context of a "Check IP" request made on behalf of a tab.
+const ipChecks = new Map();
+
 const ready = (async () => {
   const stored = await browser.storage.local.get(Object.keys(DEFAULTS));
   settings = { ...DEFAULTS, ...stored };
   try {
-    const s = await browser.storage.session.get("rt");
+    const s = await browser.storage.session.get(["rt", "vpnTabs"]);
     if (s.rt) rt = { ...rt, ...s.rt };
+    if (Array.isArray(s.vpnTabs)) {
+      const open = new Set((await browser.tabs.query({})).map((tab) => tab.id));
+      for (const id of s.vpnTabs) if (open.has(id)) vpnTabs.add(id);
+    }
   } catch (_) {}
   updateBadge();
 })();
@@ -40,6 +61,13 @@ const ready = (async () => {
 // ------------------------------------------------------------------ state helpers
 
 const currentProfile = () => settings.profiles.find((p) => p.id === settings.profileId) || null;
+
+const scopeCtx = () => ({
+  scope: settings.scope,
+  vpnTabs,
+  vpnContainers: settings.vpnContainers,
+  tablessRoute: settings.tablessRoute,
+});
 
 async function saveSettings(patch) {
   settings = { ...settings, ...patch };
@@ -52,25 +80,143 @@ async function setRuntime(patch) {
     await browser.storage.session.set({ rt });
   } catch (_) {}
   updateBadge();
+  notifyPages();
+}
+
+function notifyPages() {
   browser.runtime.sendMessage({ type: "stateChanged" }).catch(() => {});
 }
 
-function updateBadge() {
-  let text = "", color = "#9e9e9e", title = t("titleOff"), icon = "icons/icon-off.svg";
-  if (settings.enabled) {
-    if (rt.status === "on") {
-      [text, color, title, icon] = ["ON", "#2e7d32", t("titleOn"), "icons/icon-on.svg"];
-    } else if (rt.status === "connecting") {
-      [text, color, title] = ["…", "#ef6c00", t("titleConnecting")];
-    } else if (rt.status === "error") {
-      [text, color, title, icon] = ["!", "#c62828", t("titleError", rt.error || ""), "icons/icon-err.svg"];
-    }
-  }
-  browser.action.setBadgeText({ text });
-  browser.action.setBadgeBackgroundColor({ color });
-  browser.action.setTitle({ title });
-  browser.action.setIcon({ path: icon });
+// ------------------------------------------------------------------ toolbar badge
+
+function statusBadge() {
+  if (!settings.enabled) return { text: "", color: "#9e9e9e", title: t("titleOff"), icon: "icons/icon-off.svg" };
+  if (rt.status === "on") return { text: "ON", color: "#2e7d32", title: t("titleOn"), icon: "icons/icon-on.svg" };
+  if (rt.status === "error")
+    return { text: "!", color: "#c62828", title: t("titleError", rt.error || ""), icon: "icons/icon-err.svg" };
+  return { text: "…", color: "#ef6c00", title: t("titleConnecting"), icon: "icons/icon-off.svg" };
 }
+
+const ignoreErr = (p) => p && p.catch && p.catch(() => {});
+
+function updateBadge() {
+  let b = statusBadge();
+  // Limited scope + connected: the global icon stays grey, VPN tabs get their own badge.
+  if (settings.scope !== "all" && settings.enabled && rt.status === "on")
+    b = { text: "", color: "#2e7d32", title: t(settings.scope === "private" ? "titleOnPrivate" : "titleOnTabs"), icon: "icons/icon-off.svg" };
+  ignoreErr(browser.action.setBadgeText({ text: b.text }));
+  ignoreErr(browser.action.setBadgeBackgroundColor({ color: b.color }));
+  ignoreErr(browser.action.setTitle({ title: b.title }));
+  ignoreErr(browser.action.setIcon({ path: b.icon }));
+  refreshTabBadges();
+}
+
+function tabInScope(tab) {
+  return TTScope.inScope({ tabId: tab.id, incognito: tab.incognito, cookieStoreId: tab.cookieStoreId }, scopeCtx());
+}
+
+function applyTabBadge(tab) {
+  if (!tab || typeof tab.id !== "number" || tab.id < 0) return;
+  const tabId = tab.id;
+  if (settings.scope === "all" || !settings.enabled || !tabInScope(tab)) {
+    // Back to the global badge.
+    ignoreErr(browser.action.setBadgeText({ tabId, text: null }));
+    ignoreErr(browser.action.setBadgeBackgroundColor({ tabId, color: null }));
+    ignoreErr(browser.action.setTitle({ tabId, title: null }));
+    ignoreErr(browser.action.setIcon({ tabId }));
+    return;
+  }
+  const b = statusBadge();
+  const on = rt.status === "on";
+  ignoreErr(browser.action.setBadgeText({ tabId, text: on ? "VPN" : b.text }));
+  ignoreErr(browser.action.setBadgeBackgroundColor({ tabId, color: b.color }));
+  ignoreErr(browser.action.setTitle({ tabId, title: on ? t("titleTabVpn") : b.title }));
+  ignoreErr(browser.action.setIcon({ tabId, path: b.icon }));
+}
+
+async function refreshTabBadges() {
+  let tabs = [];
+  try {
+    tabs = await browser.tabs.query({});
+  } catch (_) {}
+  for (const tab of tabs) applyTabBadge(tab);
+}
+
+// ------------------------------------------------------------------ VPN tabs
+
+async function persistVpnTabs() {
+  try {
+    await browser.storage.session.set({ vpnTabs: [...vpnTabs] });
+  } catch (_) {}
+}
+
+async function setTabVpn(tabId, value) {
+  if (typeof tabId !== "number" || tabId < 0) throw new Error(t("errNoTab"));
+  if (value) vpnTabs.add(tabId);
+  else vpnTabs.delete(tabId);
+  openerChecks.set(tabId, Promise.resolve());
+  await persistVpnTabs();
+  try {
+    applyTabBadge(await browser.tabs.get(tabId));
+  } catch (_) {}
+  // Marking a tab means "I want the VPN here": turn it on if it is off.
+  if (value && !settings.enabled) await setEnabled(true);
+  else notifyPages();
+}
+
+/** First request of a tab we have not seen: inherit VPN from its opener tab. */
+function inheritFromOpener(tabId) {
+  if (typeof tabId !== "number" || tabId < 0 || vpnTabs.has(tabId)) return null;
+  if (!settings.inheritOpener) return null;
+  let check = openerChecks.get(tabId);
+  if (!check) {
+    check = (async () => {
+      try {
+        const tab = await browser.tabs.get(tabId);
+        if (tab.openerTabId != null && vpnTabs.has(tab.openerTabId)) {
+          vpnTabs.add(tabId);
+          await persistVpnTabs();
+          applyTabBadge(tab);
+        }
+      } catch (_) {}
+    })();
+    openerChecks.set(tabId, check);
+  }
+  return check;
+}
+
+browser.tabs.onCreated.addListener(async (tab) => {
+  await ready;
+  if (settings.scope === "tabs") await inheritFromOpener(tab.id);
+  applyTabBadge(tab);
+});
+
+browser.tabs.onRemoved.addListener(async (tabId) => {
+  await ready;
+  openerChecks.delete(tabId);
+  if (vpnTabs.delete(tabId)) await persistVpnTabs();
+});
+
+browser.tabs.onUpdated.addListener(async (tabId, change, tab) => {
+  if (!("status" in change) && !("url" in change)) return;
+  await ready;
+  applyTabBadge(tab);
+});
+
+/** Open a link in a new tab that uses the VPN from its very first request. */
+async function openVpnTab(url, opener) {
+  const tab = await browser.tabs.create({
+    url: "about:blank",
+    active: true,
+    windowId: opener ? opener.windowId : undefined,
+    index: opener ? opener.index + 1 : undefined,
+    openerTabId: opener ? opener.id : undefined,
+  });
+  await setTabVpn(tab.id, true);
+  await browser.tabs.update(tab.id, { url });
+}
+
+// ------------------------------------------------------------------ WebRTC
 
 async function applyWebRtc(on) {
   try {
@@ -92,6 +238,21 @@ function basicAuth(user, pass) {
 // ------------------------------------------------------------------ proxy routing
 
 const DIRECT = { type: "direct" };
+const BLACKHOLE = { type: "http", host: "127.0.0.1", port: 9 }; // kill switch without a server
+
+// Firefox reuses open proxy connections; a key derived from the profile makes a
+// changed server, login or password take effect at once instead of riding on old
+// connections. A short FNV-1a hash, so the password itself is not exposed.
+function isolationKey(p) {
+  const src = [p.id, p.kind, p.hostname, p.port, p.username, p.password,
+    p.socksHost, p.socksPort, p.socksUser, p.socksPass].join("\u0000");
+  let h = 0x811c9dc5;
+  for (let i = 0; i < src.length; i++) {
+    h ^= src.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return "tt-" + h.toString(36);
+}
 
 function proxyFor(p) {
   if (p.kind === "socks") {
@@ -103,6 +264,7 @@ function proxyFor(p) {
       password: p.socksPass || undefined,
       proxyDNS: true,
       failoverTimeout: 5,
+      connectionIsolationKey: isolationKey(p),
     };
   }
   return {
@@ -111,6 +273,7 @@ function proxyFor(p) {
     port: Number(p.port) || 443,
     proxyAuthorizationHeader: basicAuth(p.username, p.password),
     failoverTimeout: 5,
+    connectionIsolationKey: isolationKey(p),
   };
 }
 
@@ -119,9 +282,17 @@ browser.proxy.onRequest.addListener(
     await ready;
     if (!settings.enabled) return DIRECT;
     const p = currentProfile();
-    if (!p) return settings.killSwitch ? { type: "http", host: "127.0.0.1", port: 9 } : DIRECT;
     // Our own health probe always goes through the tunnel and never fails over.
-    if (healthNonce && details.url.includes("tt-health=" + healthNonce)) return proxyFor(p);
+    if (p && healthNonce && details.url.includes("tt-health=" + healthNonce)) return proxyFor(p);
+
+    // "Check IP" from the popup is routed as if it came from that tab.
+    let req = details;
+    const ip = IP_NONCE_RE.exec(details.url);
+    if (ip && ipChecks.has(ip[1])) req = { ...details, ...ipChecks.get(ip[1]) };
+    else if (settings.scope === "tabs") await inheritFromOpener(details.tabId);
+    if (!TTScope.inScope(req, scopeCtx())) return DIRECT;
+
+    if (!p) return settings.killSwitch ? BLACKHOLE : DIRECT;
     let host;
     try {
       host = new URL(details.url).hostname;
@@ -250,12 +421,84 @@ async function setEnabled(value) {
     await applyWebRtc(false);
     await setRuntime({ status: "off", error: null, latency: null, checkedAt: null, since: null });
   }
+  rebuildMenus();
 }
+
+// ------------------------------------------------------------------ menus
+
+let menusBuilding = Promise.resolve();
+
+/** Link context menu + toolbar icon menu (VPN on/off, VPN in this tab, server). */
+function rebuildMenus() {
+  menusBuilding = menusBuilding.then(async () => {
+    try {
+      await browser.menus.removeAll();
+      const tabsScope = settings.scope === "tabs";
+      browser.menus.create({ id: "open-vpn-tab", title: t("menuOpenLinkVpn"), contexts: ["link"], visible: tabsScope });
+      browser.menus.create({ id: "toggle-vpn", type: "checkbox", title: t("menuVpnOn"), contexts: ["action"], checked: settings.enabled });
+      browser.menus.create({ id: "tab-vpn", type: "checkbox", title: t("menuTabVpn"), contexts: ["action"], visible: tabsScope });
+      if (settings.profiles.length) {
+        browser.menus.create({ id: "servers", title: t("menuServer"), contexts: ["action"] });
+        for (const p of settings.profiles)
+          browser.menus.create({
+            id: "srv:" + p.id,
+            parentId: "servers",
+            type: "radio",
+            title: p.name,
+            contexts: ["action"],
+            checked: p.id === settings.profileId,
+          });
+      }
+    } catch (e) {
+      console.warn("menus:", e);
+    }
+  });
+  return menusBuilding;
+}
+
+browser.menus.onShown.addListener(async (info, tab) => {
+  if (!info.contexts.includes("action") || !tab) return;
+  await ready;
+  await Promise.all([
+    browser.menus.update("tab-vpn", { checked: vpnTabs.has(tab.id) }).catch(() => {}),
+    browser.menus.update("toggle-vpn", { checked: settings.enabled }).catch(() => {}),
+  ]);
+  browser.menus.refresh();
+});
+
+browser.menus.onClicked.addListener(async (info, tab) => {
+  await ready;
+  try {
+    if (info.menuItemId === "open-vpn-tab" && info.linkUrl) await openVpnTab(info.linkUrl, tab);
+    else if (info.menuItemId === "toggle-vpn") await setEnabled(!settings.enabled);
+    else if (info.menuItemId === "tab-vpn" && tab) await setTabVpn(tab.id, !vpnTabs.has(tab.id));
+    else if (typeof info.menuItemId === "string" && info.menuItemId.startsWith("srv:"))
+      await handlers.setSettings({ patch: { profileId: info.menuItemId.slice(4) } });
+  } catch (e) {
+    console.warn("menu action:", e);
+  }
+});
+
+// ------------------------------------------------------------------ hotkeys
+
+browser.commands.onCommand.addListener(async (command) => {
+  await ready;
+  try {
+    if (command === "toggle-vpn") await setEnabled(!settings.enabled);
+    else if (command === "toggle-tab-vpn" && settings.scope === "tabs") {
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+      if (tab) await setTabVpn(tab.id, !vpnTabs.has(tab.id));
+    }
+  } catch (e) {
+    console.warn("command:", e);
+  }
+});
 
 // ------------------------------------------------------------------ lifecycle
 
 async function resume() {
   await ready;
+  rebuildMenus();
   if (!settings.enabled) return;
   browser.alarms.create(HEALTH_ALARM, { periodInMinutes: 0.5 });
   await applyWebRtc(true);
@@ -281,7 +524,7 @@ function publicProfile(p) {
 
 async function getState() {
   const { profiles, ...s } = settings;
-  return { settings: s, profiles: profiles.map(publicProfile), runtime: rt };
+  return { settings: s, profiles: profiles.map(publicProfile), runtime: rt, vpnTabs: [...vpnTabs] };
 }
 
 function cleanProfile(input, old = {}) {
@@ -320,6 +563,7 @@ async function saveProfile({ profile }) {
   const patch = { profiles: list };
   if (!settings.profileId) patch.profileId = p.id;
   await saveSettings(patch);
+  rebuildMenus();
   if (settings.enabled && settings.profileId === p.id) await healthCheck();
   return { profile: publicProfile(p) };
 }
@@ -329,19 +573,30 @@ async function deleteProfile({ id }) {
   const patch = { profiles: list };
   if (settings.profileId === id) patch.profileId = list[0] ? list[0].id : null;
   await saveSettings(patch);
+  rebuildMenus();
   if (settings.enabled) await (patch.profileId ? healthCheck() : setEnabled(false));
   return {};
 }
 
-async function checkIp() {
+/**
+ * External IP as seen by a tab: the request is routed with that tab's context.
+ * tab: {tabId, incognito, cookieStoreId} of the popup's active tab (optional).
+ */
+async function checkIp({ tab } = {}) {
+  const nonce = Math.random().toString(36).slice(2);
+  const ctx = tab ? { tabId: tab.tabId, incognito: !!tab.incognito, cookieStoreId: tab.cookieStoreId } : { tabId: -1 };
+  ipChecks.set(nonce, ctx);
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 10000);
   try {
-    const r = await fetch("https://api.ipify.org?format=json", { cache: "no-store", signal: ctrl.signal });
+    const r = await fetch(IP_URL + "&tt-ip=" + nonce, { cache: "no-store", credentials: "omit", signal: ctrl.signal });
     const j = await r.json();
-    return { ip: j.ip, viaVpn: settings.enabled && TTRules.shouldTunnel("api.ipify.org", settings) };
+    const viaVpn =
+      settings.enabled && TTScope.inScope(ctx, scopeCtx()) && TTRules.shouldTunnel("api.ipify.org", settings);
+    return { ip: j.ip, viaVpn };
   } finally {
     clearTimeout(timer);
+    ipChecks.delete(nonce);
   }
 }
 
@@ -352,22 +607,36 @@ const handlers = {
     return getState();
   },
   async setSettings({ patch }) {
-    const allowed = ["profileId", "mode", "excludeList", "includeList", "bypassLocal", "killSwitch", "webrtcProtect"];
+    const allowed = [
+      "profileId", "mode", "excludeList", "includeList", "bypassLocal", "killSwitch", "webrtcProtect",
+      "scope", "inheritOpener", "tablessRoute", "vpnContainers",
+    ];
     const clean = {};
     for (const k of allowed) if (k in patch) clean[k] = patch[k];
     if ("excludeList" in clean) clean.excludeList = TTRules.parseList(clean.excludeList.join("\n"));
     if ("includeList" in clean) clean.includeList = TTRules.parseList(clean.includeList.join("\n"));
     if ("mode" in clean && !["exclude", "include"].includes(clean.mode)) clean.mode = "exclude";
+    if ("scope" in clean && !TTScope.SCOPES.includes(clean.scope)) clean.scope = "all";
+    if ("tablessRoute" in clean) clean.tablessRoute = clean.tablessRoute === "vpn" ? "vpn" : "direct";
+    if ("inheritOpener" in clean) clean.inheritOpener = !!clean.inheritOpener;
+    if ("vpnContainers" in clean)
+      clean.vpnContainers = Array.isArray(clean.vpnContainers) ? clean.vpnContainers.filter((x) => typeof x === "string") : [];
     if ("profileId" in clean && clean.profileId && !settings.profiles.some((p) => p.id === clean.profileId))
       throw new Error(t("errNoSuchServer"));
     const changedServer = "profileId" in clean && clean.profileId !== settings.profileId;
     await saveSettings(clean);
     if ("webrtcProtect" in clean && settings.enabled) await applyWebRtc(true);
+    if (["scope", "vpnContainers", "profileId"].some((k) => k in clean)) rebuildMenus();
+    updateBadge();
     if (changedServer && settings.enabled) {
       authFails = 0;
       await setRuntime({ status: "connecting", error: null, since: null });
       await healthCheck();
-    }
+    } else notifyPages();
+    return getState();
+  },
+  async setTabVpn({ tabId, value }) {
+    await setTabVpn(tabId, !!value);
     return getState();
   },
   async parseConfig({ text, name }) {

@@ -3,6 +3,9 @@
 const $ = (id) => document.getElementById(id);
 let state = null;
 let currentHost = null;
+let activeTab = null; // {id, incognito, cookieStoreId}
+let containerName = ""; // name of the active tab's container, if any
+let privateAllowed = true;
 
 const STATUS = {
   off: ["statusOff", ""],
@@ -43,6 +46,8 @@ function render() {
     sel.value = settings.profileId || "";
   }
   $("mode").value = settings.mode;
+  $("scope").value = settings.scope || "all";
+  renderTab();
 
   $("stats").hidden = key !== "on";
   $("lat").textContent = runtime.latency != null ? t("ms", runtime.latency) : "—";
@@ -51,11 +56,43 @@ function render() {
   renderSite();
 }
 
+function tabCtx() {
+  return activeTab ? { tabId: activeTab.id, incognito: activeTab.incognito, cookieStoreId: activeTab.cookieStoreId } : { tabId: -1 };
+}
+
+function scopeCtx() {
+  const s = state.settings;
+  return { scope: s.scope, vpnTabs: new Set(state.vpnTabs || []), vpnContainers: s.vpnContainers, tablessRoute: s.tablessRoute };
+}
+
+/** "VPN in this tab" switch and scope hints. */
+function renderTab() {
+  const { settings } = state;
+  const scope = settings.scope || "all";
+  const box = $("tabBox");
+  const note = $("tabNote");
+  box.hidden = scope !== "tabs" || !activeTab;
+  if (!box.hidden) {
+    const marked = (state.vpnTabs || []).includes(activeTab.id);
+    const byContainer = TTScope.isVpnContainer(activeTab.cookieStoreId, settings);
+    $("tabToggle").checked = marked || byContainer;
+    $("tabToggle").disabled = byContainer && !marked;
+    box.classList.toggle("on", settings.enabled && (marked || byContainer));
+    note.hidden = !byContainer;
+    note.textContent = byContainer ? t("popupTabByContainer", containerName || activeTab.cookieStoreId) : "";
+  }
+  const sn = $("scopeNote");
+  let msg = "";
+  if (scope === "private") msg = !privateAllowed ? t("privNotAllowed") : activeTab && !activeTab.incognito ? t("privThisTabDirect") : "";
+  sn.textContent = msg;
+  sn.hidden = !msg;
+}
+
 function renderSite() {
   if (!currentHost || !state) return;
   const { settings } = state;
   const local = TTRules.isLocal(currentHost);
-  const tunneled = TTRules.shouldTunnel(currentHost, settings);
+  const tunneled = TTScope.inScope(tabCtx(), scopeCtx()) && TTRules.shouldTunnel(currentHost, settings);
   $("siteBox").hidden = false;
   $("siteHost").textContent = currentHost;
   $("siteHost").title = currentHost;
@@ -110,6 +147,28 @@ $("profile").addEventListener("change", async (e) => {
   }
 });
 
+$("scope").addEventListener("change", async (e) => {
+  try {
+    state = await api("setSettings", { patch: { scope: e.target.value } });
+    render();
+    Toast.ok(t("toastScopeSaved"));
+  } catch (err) {
+    Toast.error(err.message);
+  }
+});
+
+$("tabToggle").addEventListener("change", async (e) => {
+  if (!activeTab) return;
+  try {
+    state = await api("setTabVpn", { tabId: activeTab.id, value: e.target.checked });
+    render();
+    Toast.ok(t(e.target.checked ? "toastTabVpnOn" : "toastTabVpnOff"));
+  } catch (err) {
+    Toast.error(err.message);
+    refresh();
+  }
+});
+
 $("mode").addEventListener("change", async (e) => {
   try {
     state = await api("setSettings", { patch: { mode: e.target.value } });
@@ -135,7 +194,7 @@ $("siteBtn").addEventListener("click", async (e) => {
 $("ipBtn").addEventListener("click", async (e) => {
   e.target.disabled = true;
   try {
-    const { ip, viaVpn } = await api("checkIp");
+    const { ip, viaVpn } = await api("checkIp", { tab: activeTab ? tabCtx() : undefined });
     Toast.ok(t(viaVpn ? "toastIpVpn" : "toastIpDirect", ip));
   } catch (err) {
     Toast.error(t("toastIpFailed", err.message));
@@ -156,12 +215,18 @@ browser.runtime.onMessage.addListener((msg) => {
 (async () => {
   applyI18n();
   try {
-    await refresh();
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (tab && tab.url && /^(https?|wss?):/.test(tab.url)) {
-      currentHost = new URL(tab.url).hostname;
-      renderSite();
+    if (tab) activeTab = { id: tab.id, incognito: tab.incognito, cookieStoreId: tab.cookieStoreId };
+    if (tab && tab.url && /^(https?|wss?):/.test(tab.url)) currentHost = new URL(tab.url).hostname;
+    try {
+      privateAllowed = await browser.extension.isAllowedIncognitoAccess();
+    } catch (_) {}
+    if (tab && tab.cookieStoreId && tab.cookieStoreId !== "firefox-default" && !tab.incognito) {
+      try {
+        containerName = (await browser.contextualIdentities.get(tab.cookieStoreId)).name;
+      } catch (_) {}
     }
+    await refresh();
     if (state.settings.enabled) {
       state = await api("refresh");
       render();

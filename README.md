@@ -4,6 +4,8 @@ A Firefox extension: browser-only VPN client for [TrustTunnel](https://github.co
 
 [Русская версия](README.ru.md)
 
+A Chromium version lives in a separate repository: [TrustTunnel-Browser-Client](https://github.com/BorisGB2001/TrustTunnel-Browser-Client).
+
 > This is an unofficial, community project. It is not affiliated with or endorsed by AdGuard.
 
 ## How it works
@@ -20,6 +22,11 @@ For setups a browser cannot handle (HTTP/3-only servers, anti-DPI, `client_rando
   - "everything except the list" or "only the listed sites";
   - domains (including subdomains), IPv4 addresses and CIDR ranges;
   - one-click "open this site directly / via VPN".
+- Where the VPN works:
+  - all tabs;
+  - **only marked tabs** — switch in the popup, `Alt+Shift+T`, or "Open link in a VPN tab" in the link context menu. Tabs opened from a VPN tab inherit it (optional). The VPN stays on the tab whatever site it opens. Firefox **containers** can be set to always use the VPN;
+  - **only private windows** (allow the add-on in private windows in `about:addons`).
+- Toolbar icon menu (right click): VPN on/off, VPN in this tab, switch server. Hotkey `Alt+Shift+V` turns the VPN on/off.
 - Kill switch: if the server is unreachable, nothing leaks around the VPN.
 - WebRTC IP leak protection while the VPN is on.
 - Connection health check every 30 s with latency.
@@ -68,7 +75,7 @@ Then add a server in the extension with the **Via local trusttunnel_client (SOCK
 ## Development
 
 ```
-extension/          the WebExtension (Manifest V3, Firefox 128+)
+extension/          the WebExtension (Manifest V3, Firefox 140+)
   _locales/         en (default) and ru messages
   lib/config.js     tt:// deep link (QUIC varint TLV) and TOML parsers
   lib/rules.js      split-tunneling rules
@@ -76,11 +83,14 @@ extension/          the WebExtension (Manifest V3, Firefox 128+)
 scripts/
   build-xpi.sh      pack extension/ into dist/trusttunnel-firefox-<version>.xpi
   test-config.js    parser self-test (node)
+  test-scope.js     VPN scope (tabs / private / containers) self-test (node)
   e2e-firefox.py    end-to-end test against a live server via Marionette
 ```
 
 ```bash
 node scripts/test-config.js
+node scripts/test-scope.js
+python3 scripts/e2e-firefox.py --fake    # local fake server; close your regular Firefox first
 npx web-ext@8 lint --source-dir extension
 scripts/build-xpi.sh
 python3 scripts/e2e-firefox.py key.txt   # close your regular Firefox first

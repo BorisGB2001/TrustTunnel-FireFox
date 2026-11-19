@@ -3,7 +3,7 @@
     "message": "TrustTunnel Browser Client"
   },
   "extDescription": {
-    "message": "Browser-only VPN client for TrustTunnel (AdGuard) servers: connects as an HTTPS proxy, imports tt:// keys and TOML configs, per-site split tunneling."
+    "message": "Browser-only VPN client for TrustTunnel (AdGuard) servers: connects as an HTTPS proxy, imports tt:// keys and TOML configs, per-site and per-tab split tunneling."
   },
   "titleOff": {
     "message": "TrustTunnel — off"
@@ -481,5 +481,113 @@
   },
   "helpSocks": {
     "message": "Add a [listener.socks] section with address = \"127.0.0.1:1080\" to trusttunnel_client.toml and run trusttunnel_client --config trusttunnel_client.toml."
+  },
+  "titleOnTabs": {
+    "message": "TrustTunnel — connected, VPN only in marked tabs"
+  },
+  "titleOnPrivate": {
+    "message": "TrustTunnel — connected, VPN only in private windows"
+  },
+  "titleTabVpn": {
+    "message": "TrustTunnel — this tab goes through the VPN"
+  },
+  "errNoTab": {
+    "message": "No tab to switch."
+  },
+  "menuOpenLinkVpn": {
+    "message": "Open link in a VPN tab"
+  },
+  "menuVpnOn": {
+    "message": "VPN on"
+  },
+  "menuTabVpn": {
+    "message": "VPN in this tab"
+  },
+  "menuServer": {
+    "message": "Server"
+  },
+  "cmdToggleVpn": {
+    "message": "Turn the VPN on / off"
+  },
+  "cmdToggleTabVpn": {
+    "message": "VPN in the current tab on / off"
+  },
+  "popupScope": {
+    "message": "Where the VPN works"
+  },
+  "scopeAll": {
+    "message": "All tabs"
+  },
+  "scopeTabs": {
+    "message": "Only marked tabs"
+  },
+  "scopePrivate": {
+    "message": "Only private windows"
+  },
+  "popupTabVpn": {
+    "message": "VPN in this tab"
+  },
+  "popupTabByContainer": {
+    "message": "Always on: the tab is in the “$1” container."
+  },
+  "privNotAllowed": {
+    "message": "The add-on is not allowed in private windows: about:addons → TrustTunnel → “Run in Private Windows” → Allow."
+  },
+  "privAllowed": {
+    "message": "✓ The add-on is allowed in private windows."
+  },
+  "privThisTabDirect": {
+    "message": "This is a normal window: it goes directly. Open a private window to use the VPN."
+  },
+  "toastScopeSaved": {
+    "message": "Saved. Reload open tabs to apply."
+  },
+  "toastTabVpnOn": {
+    "message": "VPN is on in this tab. Reload the page to apply."
+  },
+  "toastTabVpnOff": {
+    "message": "VPN is off in this tab."
+  },
+  "optScope": {
+    "message": "Where the VPN works"
+  },
+  "scopeAllHint": {
+    "message": "Every tab and window uses the VPN (the site lists below still apply)."
+  },
+  "scopeTabsHint": {
+    "message": "Only tabs you mark in the toolbar popup, with the hotkey or “Open link in a VPN tab”, plus tabs of the containers chosen below. The VPN stays on the tab whatever site you open in it. Site lists still apply inside those tabs."
+  },
+  "scopePrivateHint": {
+    "message": "Only private windows use the VPN; normal windows go directly."
+  },
+  "optInheritOpener": {
+    "message": "Tabs opened from a VPN tab also use the VPN"
+  },
+  "optTabless": {
+    "message": "Requests without a tab (service workers, prefetch):"
+  },
+  "tablessDirect": {
+    "message": "direct"
+  },
+  "tablessVpn": {
+    "message": "via VPN"
+  },
+  "optContainers": {
+    "message": "Containers always via VPN"
+  },
+  "optContainersHint": {
+    "message": "All tabs of the selected Firefox containers use the VPN."
+  },
+  "containersOff": {
+    "message": "Containers are turned off in Firefox (Settings → General → Tabs → Enable Container Tabs)."
+  },
+  "containersNone": {
+    "message": "No containers yet."
+  },
+  "hotkeysList": {
+    "message": "Hotkeys: $1."
+  },
+  "hotkeysHint": {
+    "message": "Change them: about:addons → ⚙ → Manage Extension Shortcuts."
   }
 }

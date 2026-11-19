@@ -3,7 +3,7 @@
     "message": "TrustTunnel — клиент для браузера"
   },
   "extDescription": {
-    "message": "VPN-клиент TrustTunnel (AdGuard) только для Firefox: сервер как HTTPS-прокси, импорт ключей tt:// и TOML, раздельное туннелирование по сайтам."
+    "message": "VPN-клиент TrustTunnel (AdGuard) только для Firefox: сервер как HTTPS-прокси, импорт ключей tt:// и TOML, раздельное туннелирование по сайтам и вкладкам."
   },
   "titleOff": {
     "message": "TrustTunnel — выключен"
@@ -481,5 +481,113 @@
   },
   "helpSocks": {
     "message": "Добавьте в trusttunnel_client.toml секцию [listener.socks] с address = \"127.0.0.1:1080\" и запустите trusttunnel_client --config trusttunnel_client.toml."
+  },
+  "titleOnTabs": {
+    "message": "TrustTunnel — подключено, VPN только в отмеченных вкладках"
+  },
+  "titleOnPrivate": {
+    "message": "TrustTunnel — подключено, VPN только в приватных окнах"
+  },
+  "titleTabVpn": {
+    "message": "TrustTunnel — эта вкладка идёт через VPN"
+  },
+  "errNoTab": {
+    "message": "Нет вкладки для переключения."
+  },
+  "menuOpenLinkVpn": {
+    "message": "Открыть ссылку во вкладке с VPN"
+  },
+  "menuVpnOn": {
+    "message": "VPN включён"
+  },
+  "menuTabVpn": {
+    "message": "VPN в этой вкладке"
+  },
+  "menuServer": {
+    "message": "Сервер"
+  },
+  "cmdToggleVpn": {
+    "message": "Включить / выключить VPN"
+  },
+  "cmdToggleTabVpn": {
+    "message": "VPN в текущей вкладке: вкл / выкл"
+  },
+  "popupScope": {
+    "message": "Где работает VPN"
+  },
+  "scopeAll": {
+    "message": "Во всех вкладках"
+  },
+  "scopeTabs": {
+    "message": "Только в отмеченных вкладках"
+  },
+  "scopePrivate": {
+    "message": "Только в приватных окнах"
+  },
+  "popupTabVpn": {
+    "message": "VPN в этой вкладке"
+  },
+  "popupTabByContainer": {
+    "message": "Всегда включён: вкладка в контейнере «$1»."
+  },
+  "privNotAllowed": {
+    "message": "Расширению не разрешена работа в приватных окнах: about:addons → TrustTunnel → «Запуск в приватных окнах» → Разрешить."
+  },
+  "privAllowed": {
+    "message": "✓ Расширению разрешена работа в приватных окнах."
+  },
+  "privThisTabDirect": {
+    "message": "Это обычное окно: оно идёт напрямую. Откройте приватное окно, чтобы работать через VPN."
+  },
+  "toastScopeSaved": {
+    "message": "Сохранено. Перезагрузите открытые вкладки, чтобы применить."
+  },
+  "toastTabVpnOn": {
+    "message": "VPN включён в этой вкладке. Перезагрузите страницу, чтобы применить."
+  },
+  "toastTabVpnOff": {
+    "message": "VPN в этой вкладке выключен."
+  },
+  "optScope": {
+    "message": "Где работает VPN"
+  },
+  "scopeAllHint": {
+    "message": "VPN во всех вкладках и окнах (списки сайтов ниже действуют)."
+  },
+  "scopeTabsHint": {
+    "message": "Только вкладки, отмеченные в окне расширения, горячей клавишей или через «Открыть ссылку во вкладке с VPN», а также вкладки выбранных ниже контейнеров. VPN остаётся на вкладке, какой бы сайт в ней ни открыть. Списки сайтов внутри таких вкладок действуют."
+  },
+  "scopePrivateHint": {
+    "message": "VPN только в приватных окнах, обычные окна идут напрямую."
+  },
+  "optInheritOpener": {
+    "message": "Вкладки, открытые из вкладки с VPN, тоже идут через VPN"
+  },
+  "optTabless": {
+    "message": "Запросы без вкладки (service worker, предзагрузка):"
+  },
+  "tablessDirect": {
+    "message": "напрямую"
+  },
+  "tablessVpn": {
+    "message": "через VPN"
+  },
+  "optContainers": {
+    "message": "Контейнеры всегда через VPN"
+  },
+  "optContainersHint": {
+    "message": "Все вкладки выбранных контейнеров Firefox идут через VPN."
+  },
+  "containersOff": {
+    "message": "Контейнеры в Firefox выключены (Настройки → Основные → Вкладки → Включить вкладки в контейнере)."
+  },
+  "containersNone": {
+    "message": "Контейнеров пока нет."
+  },
+  "hotkeysList": {
+    "message": "Горячие клавиши: $1."
+  },
+  "hotkeysHint": {
+    "message": "Изменить: about:addons → ⚙ → Управление горячими клавишами расширений."
   }
 }

@@ -37,3 +37,7 @@ header strong { font-size: 16px; }
 
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 13px; }
 footer { padding-top: 2px; }
+
+.tabvpn { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+.tabvpn.on { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
+.note { border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); padding: 6px 10px; border-radius: 6px; }

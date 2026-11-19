@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "homepage_url": "https://github.com/BorisGB2001/TrustTunnel-FireFox",
@@ -17,11 +17,21 @@
     "tabs",
     "webRequest",
     "webRequestBlocking",
-    "webRequestAuthProvider"
+    "webRequestAuthProvider",
+    "menus",
+    "contextualIdentities"
   ],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
-    "scripts": ["lib/i18n.js", "lib/rules.js", "lib/config.js", "background.js"]
+    "scripts": [
+      "lib/i18n.js",
+      "lib/rules.js",
+      "lib/scope.js",
+      "lib/config.js",
+      "background.js"
+    ]
   },
   "action": {
     "default_title": "__MSG_titleOff__",
@@ -32,13 +42,32 @@
     "page": "options/options.html",
     "open_in_tab": true
   },
+  "commands": {
+    "toggle-vpn": {
+      "suggested_key": {
+        "default": "Alt+Shift+V"
+      },
+      "description": "__MSG_cmdToggleVpn__"
+    },
+    "toggle-tab-vpn": {
+      "suggested_key": {
+        "default": "Alt+Shift+T"
+      },
+      "description": "__MSG_cmdToggleTabVpn__"
+    }
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "trusttunnel-firefox@borisgb2001.github.io",
-      "strict_min_version": "128.0",
+      "strict_min_version": "140.0",
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": [
+          "none"
+        ]
       }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
     }
   }
 }

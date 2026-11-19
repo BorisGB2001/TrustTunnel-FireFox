@@ -30,6 +30,28 @@
   </label>
 
   <label class="field">
+    <span class="small muted" data-i18n="popupScope"></span>
+    <select id="scope">
+      <option value="all" data-i18n="scopeAll"></option>
+      <option value="tabs" data-i18n="scopeTabs"></option>
+      <option value="private" data-i18n="scopePrivate"></option>
+    </select>
+  </label>
+
+  <section class="tabvpn" id="tabBox" hidden>
+    <div class="row">
+      <span class="grow" data-i18n="popupTabVpn"></span>
+      <label class="switch" data-i18n-title="popupTabVpn">
+        <input type="checkbox" id="tabToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="small muted" id="tabNote" hidden></div>
+  </section>
+
+  <div class="note small" id="scopeNote" hidden></div>
+
+  <label class="field">
     <span class="small muted" data-i18n="popupMode"></span>
     <select id="mode">
       <option value="exclude" data-i18n="modeExclude"></option>
@@ -60,6 +82,7 @@
 
   <script src="../lib/i18n.js"></script>
   <script src="../lib/rules.js"></script>
+  <script src="../lib/scope.js"></script>
   <script src="../lib/api.js"></script>
   <script src="../lib/toast.js"></script>
   <script src="popup.js"></script>

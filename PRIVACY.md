@@ -1,6 +1,6 @@
 # Privacy Policy — TrustTunnel Browser Client
 
-Last updated: 2026-11-18
+Last updated: 2026-11-19
 
 TrustTunnel Browser Client ("the add-on") is an open-source Firefox extension that connects the browser to a TrustTunnel VPN server chosen by the user.
 
@@ -11,7 +11,8 @@ None. The add-on has no analytics, telemetry, crash reporting or advertising, an
 ## Data stored on your device
 
 - Server profiles you add: name, hostname, port, username, password, optional server certificate, SOCKS5 settings.
-- Settings: routing mode, site lists, kill switch and WebRTC options.
+- Settings: routing mode, site lists, where the VPN works (all tabs / marked tabs / private windows), the containers you chose, kill switch and WebRTC options.
+- The list of tabs you marked "VPN in this tab": kept only for the current browser session (`storage.session`), forgotten when a tab closes or the browser restarts.
 
 This data is kept in the add-on's local storage inside your Firefox profile (`storage.local`). It is not synced and is deleted when you remove the server or uninstall the add-on.
 
