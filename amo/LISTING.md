@@ -112,10 +112,18 @@ No remote code, no minified or bundled code, no analytics. Network requests made
 
 Testing requires a TrustTunnel server (installation: `curl -fsSL https://raw.githubusercontent.com/TrustTunnel/TrustTunnel/refs/heads/master/scripts/install.sh | sh -s -`, then `setup_wizard`). The tt:// and TOML parsers and the tab/private/container routing can be checked without a server: `node scripts/test-config.js` and `node scripts/test-scope.js` in the repository; `python3 scripts/e2e-firefox.py --fake` runs Firefox against a local fake TrustTunnel server.
 
-## Screenshots (1280×800 recommended, PNG)
+## Images
 
-1. Popup — connected, current site "via VPN".
-2. Settings — server list and "Add server" with a parsed tt:// key (hide the password and real hostname).
-3. Settings — routing lists and protection options.
+Files in `amo/images/` (made by `python3 scripts/amo-screenshots.py`: real headless Firefox, local fake server, demo names only — no real hosts or credentials).
+
+- **Add-on icon**: `icon-128.png` (128×128, from `extension/icons/icon-on.svg`).
+- **Screenshots** (1280×800 PNG; images are shared by all locales, captions are translated):
+
+| File | Caption (en-US) | Caption (ru) |
+|---|---|---|
+| `en-1-popup.png` | Toolbar popup: connected, VPN only in marked tabs, current site via VPN | Окно расширения: подключено, VPN только в отмеченных вкладках, текущий сайт через VPN |
+| `en-2-servers.png` | Settings: servers and where the VPN works | Настройки: серверы и где работает VPN |
+| `en-3-scope.png` | Marked tabs, containers, hotkeys and split tunneling lists | Отмеченные вкладки, контейнеры, горячие клавиши и списки сайтов |
+| `en-4-add-server.png` | Add a server from a tt:// key or TOML config | Добавление сервера из ключа tt:// или TOML-конфига |
 
 Do not show real server addresses, usernames or passwords in screenshots.

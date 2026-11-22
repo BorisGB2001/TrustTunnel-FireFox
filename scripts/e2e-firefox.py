@@ -98,7 +98,7 @@ const [code, args, done] = [arguments[0], arguments[1], arguments[arguments.leng
 class FakeTrustTunnel:
     """HTTPS proxy: TLS + HTTP/1.1 CONNECT with Basic auth, 407 on bad credentials."""
 
-    def __init__(self, workdir, user="tester", password="secret-pass"):
+    def __init__(self, workdir, user="tester", password="secret-pass", hostname="localhost"):
         self.user, self.password = user, password
         self.log = []  # CONNECT targets (host) that were accepted
         self.rejected = 0
@@ -112,14 +112,15 @@ class FakeTrustTunnel:
         csr = os.path.join(workdir, "fake.csr")
         ext = os.path.join(workdir, "fake.ext")
         with open(ext, "w") as f:
-            f.write("subjectAltName=DNS:localhost\nbasicConstraints=critical,CA:FALSE\n"
-                    "keyUsage=critical,digitalSignature\nextendedKeyUsage=serverAuth\n")
+            f.write("subjectAltName=DNS:%s\n" % hostname)
+            f.write("basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature\n"
+                    "extendedKeyUsage=serverAuth\n")
         ec = ["-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1", "-nodes"]
         for cmd in (
             ["openssl", "req", "-x509", *ec, "-keyout", ca_key, "-out", self.cert, "-days", "2",
              "-subj", "/CN=TrustTunnel e2e test CA", "-addext", "basicConstraints=critical,CA:TRUE",
              "-addext", "keyUsage=critical,keyCertSign"],
-            ["openssl", "req", *ec, "-keyout", key, "-out", csr, "-subj", "/CN=localhost"],
+            ["openssl", "req", *ec, "-keyout", key, "-out", csr, "-subj", "/CN=" + hostname],
             ["openssl", "x509", "-req", "-in", csr, "-CA", self.cert, "-CAkey", ca_key, "-CAcreateserial",
              "-out", leaf, "-days", "2", "-extfile", ext],
         ):
@@ -218,7 +219,7 @@ class FakeTrustTunnel:
 # ---------------------------------------------------------------- harness
 
 class Run:
-    def __init__(self, firefox):
+    def __init__(self, firefox, ext_dir=EXT_DIR, prefs=None):
         self.ok = True
         self.prof = tempfile.mkdtemp(prefix="tt-e2e-")
         with open(os.path.join(self.prof, "user.js"), "w") as f:
@@ -230,6 +231,8 @@ class Run:
             f.write('user_pref("network.dns.disablePrefetch", true);\n')
             f.write('user_pref("network.prefetch-next", false);\n')
             f.write('user_pref("network.http.speculative-parallel-limit", 0);\n')
+            for k, v in (prefs or {}).items():
+                f.write("user_pref(%s, %s);\n" % (json.dumps(k), json.dumps(v)))
         self.ff = subprocess.Popen(
             [firefox, "-marionette", "-headless", "-no-remote", "--remote-allow-system-access", "-profile", self.prof],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -242,7 +245,7 @@ class Run:
         except Exception:
             self.ff.kill()  # do not leave a headless Firefox holding the Marionette port
             raise
-        addon = self.m.cmd("Addon:Install", {"path": EXT_DIR, "temporary": True})
+        addon = self.m.cmd("Addon:Install", {"path": ext_dir, "temporary": True})
         self.addon_id = addon.get("value") if isinstance(addon, dict) else addon
         print("Extension installed:", self.addon_id)
         self.m.cmd("Marionette:SetContext", {"value": "chrome"})
