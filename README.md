@@ -26,6 +26,10 @@ For setups a browser cannot handle (HTTP/3-only servers, anti-DPI, `client_rando
   - all tabs;
   - **only marked tabs** — switch in the popup, `Alt+Shift+T`, or "Open link in a VPN tab" in the link context menu. Tabs opened from a VPN tab inherit it (optional). The VPN stays on the tab whatever site it opens. Firefox **containers** can be set to always use the VPN;
   - **only private windows** (allow the add-on in private windows in `about:addons`).
+- Marked tabs keep their VPN after a browser restart and when you reopen a closed tab (allow it once in Settings: the optional `sessions` permission).
+- Countries (GEO): tick countries and choose "selected countries without VPN" or "only selected countries via VPN". Site lists always win over countries. The IPv4 country database is downloaded on request (button **Update database**).
+- **Check IP** shows your address with the VPN and without it; optionally also the country, provider and whether the address looks like a VPN, hosting or home connection (proxycheck.io, asked only after you enable it).
+- Optional **Statistics** button in the popup that opens a page you set, e.g. your [TrustPanel](https://github.com/BorisGB2001/TrustPanel) portal.
 - Toolbar icon menu (right click): VPN on/off, VPN in this tab, switch server. Hotkey `Alt+Shift+V` turns the VPN on/off.
 - Kill switch: if the server is unreachable, nothing leaks around the VPN.
 - WebRTC IP leak protection while the VPN is on.
@@ -101,7 +105,9 @@ python3 scripts/e2e-firefox.py key.txt   # close your regular Firefox first
 The extension collects no data. Server credentials are stored only in your Firefox profile (`storage.local`) and sent only to your own server. The only third-party requests are:
 
 - the connectivity check `https://www.gstatic.com/generate_204`, sent through your tunnel;
-- the **Check IP** button, which queries `https://api.ipify.org`.
+- the **Check IP** button, which queries `https://api.ipify.org` (once through the tunnel, once directly);
+- only if you enable it: `https://proxycheck.io` for the country, provider and type of those two addresses;
+- only if you use countries: the country database from `https://cdn.jsdelivr.net` when you press **Update database**, and DNS-over-HTTPS lookups of site names, sent through your tunnel to the service you choose (Cloudflare, Google, AdGuard DNS or your own server).
 
 Full text: [PRIVACY.md](PRIVACY.md).
 

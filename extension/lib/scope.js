@@ -20,10 +20,11 @@ const TTScope = (() => {
     if (scope === "all") return true;
     if (scope === "private") return !!req.incognito;
     // scope === "tabs"
+    // A VPN container covers its tab-less requests too (service workers, favicons).
+    if (isVpnContainer(req.cookieStoreId, ctx)) return true;
     const tabId = typeof req.tabId === "number" ? req.tabId : -1;
     if (tabId < 0) return ctx.tablessRoute === "vpn";
-    if (ctx.vpnTabs && ctx.vpnTabs.has(tabId)) return true;
-    return isVpnContainer(req.cookieStoreId, ctx);
+    return !!(ctx.vpnTabs && ctx.vpnTabs.has(tabId));
   }
 
   function isVpnContainer(cookieStoreId, ctx) {

@@ -6,6 +6,7 @@ let currentHost = null;
 let activeTab = null; // {id, incognito, cookieStoreId}
 let containerName = ""; // name of the active tab's container, if any
 let privateAllowed = true;
+let marksKept = true; // "sessions" allowed: marks survive a restart
 
 const STATUS = {
   off: ["statusOff", ""],
@@ -53,6 +54,8 @@ function render() {
   $("lat").textContent = runtime.latency != null ? t("ms", runtime.latency) : "—";
   $("chk").textContent = fmtAgo(runtime.checkedAt);
   $("since").textContent = fmtSince(runtime.since);
+  $("version").textContent = state.version ? "v" + state.version : "";
+  $("statsBtn").hidden = !settings.statsUrl;
   renderSite();
 }
 
@@ -78,12 +81,14 @@ function renderTab() {
     $("tabToggle").checked = marked || byContainer;
     $("tabToggle").disabled = byContainer && !marked;
     box.classList.toggle("on", settings.enabled && (marked || byContainer));
-    note.hidden = !byContainer;
-    note.textContent = byContainer ? t("popupTabByContainer", containerName || activeTab.cookieStoreId) : "";
+    const notKept = marked && !marksKept;
+    note.hidden = !byContainer && !notKept;
+    note.textContent = byContainer ? t("popupTabByContainer", containerName || activeTab.cookieStoreId) : notKept ? t("popupTabNotKept") : "";
   }
   const sn = $("scopeNote");
   let msg = "";
   if (scope === "private") msg = !privateAllowed ? t("privNotAllowed") : activeTab && !activeTab.incognito ? t("privThisTabDirect") : "";
+  else if (!privateAllowed && settings.enabled) msg = t("privNotCovered");
   sn.textContent = msg;
   sn.hidden = !msg;
 }
@@ -97,8 +102,21 @@ function renderSite() {
   $("siteHost").textContent = currentHost;
   $("siteHost").title = currentHost;
   const route = $("siteRoute");
-  route.textContent = t(!settings.enabled ? "routeVpnOff" : tunneled ? "routeVpn" : "routeDirect");
-  route.className = "pill" + (settings.enabled && tunneled ? " vpn" : "");
+  const showRoute = (viaVpn, country) => {
+    const label = t(!settings.enabled ? "routeVpnOff" : viaVpn ? "routeVpn" : "routeDirect");
+    route.textContent = country ? country + " · " + label : label;
+    route.title = country ? TTGeo.nameOf(country, browser.i18n.getUILanguage()) : "";
+    route.className = "pill" + (settings.enabled && viaVpn ? " vpn" : "");
+  };
+  showRoute(tunneled, null);
+  if (settings.geoMode && settings.geoMode !== "off" && !local) {
+    const host = currentHost;
+    api("routeInfo", { tab: tabCtx(), host })
+      .then((r) => {
+        if (host === currentHost) showRoute(r.tunneled, r.country);
+      })
+      .catch(() => {});
+  }
 
   const btn = $("siteBtn");
   const site = TTRules.siteOf(currentHost);
@@ -191,16 +209,69 @@ $("siteBtn").addEventListener("click", async (e) => {
   }
 });
 
-$("ipBtn").addEventListener("click", async (e) => {
-  e.target.disabled = true;
+function showIp(prefix, res) {
+  const kind = $(prefix + "Kind");
+  const sub = $(prefix + "Sub");
+  kind.hidden = sub.hidden = true;
+  if (!res) {
+    $(prefix).textContent = t("ipVpnOff");
+    return;
+  }
+  if (res.error) {
+    $(prefix).textContent = t("ipFailed", res.error);
+    return;
+  }
+  $(prefix).textContent = res.ip;
+  const info = res.info;
+  if (!info) return;
+  kind.textContent = t("ipKind_" + info.kind) || info.kind;
+  // An address seen as VPN, proxy, Tor or hosting is what sites may treat as "not a home user".
+  kind.className = "pill" + (["vpn", "proxy", "tor", "hosting"].includes(info.kind) ? " warn" : " vpn");
+  kind.hidden = false;
+  const parts = [];
+  if (info.country) parts.push(TTGeo.nameOf(info.country, browser.i18n.getUILanguage()));
+  if (info.provider) parts.push(info.provider);
+  sub.textContent = parts.join(" · ");
+  sub.hidden = !parts.length;
+}
+
+async function checkIp() {
+  const btn = $("ipBtn");
+  btn.disabled = true;
   try {
-    const { ip, viaVpn } = await api("checkIp", { tab: activeTab ? tabCtx() : undefined });
-    Toast.ok(t(viaVpn ? "toastIpVpn" : "toastIpDirect", ip));
+    const res = await api("checkIp", { tab: activeTab ? tabCtx() : undefined, host: currentHost || undefined });
+    $("ipBox").hidden = false;
+    showIp("ipVpn", res.vpn);
+    showIp("ipDirect", res.direct);
+    const tabLine = $("ipTab");
+    tabLine.hidden = !res.tabVia;
+    if (res.tabVia) tabLine.textContent = t(res.tabVia === "vpn" ? "ipTabVpn" : "ipTabDirect");
+    $("ipInfoBtn").hidden = res.ipInfo;
+    if ((res.vpn && res.vpn.error) || res.direct.error) Toast.error(t("toastIpFailed", (res.vpn && res.vpn.error) || res.direct.error));
   } catch (err) {
     Toast.error(t("toastIpFailed", err.message));
   } finally {
-    e.target.disabled = false;
+    btn.disabled = false;
   }
+}
+
+$("ipBtn").addEventListener("click", checkIp);
+
+// Country, provider and kind come from proxycheck.io: asked only after this click.
+$("ipInfoBtn").addEventListener("click", async () => {
+  try {
+    state = await api("setSettings", { patch: { ipInfo: true } });
+    await checkIp();
+  } catch (err) {
+    Toast.error(err.message);
+  }
+});
+
+$("statsBtn").addEventListener("click", () => {
+  const url = state && state.settings.statsUrl;
+  if (!url) return;
+  browser.tabs.create({ url });
+  window.close();
 });
 
 $("optBtn").addEventListener("click", () => {
@@ -220,6 +291,9 @@ browser.runtime.onMessage.addListener((msg) => {
     if (tab && tab.url && /^(https?|wss?):/.test(tab.url)) currentHost = new URL(tab.url).hostname;
     try {
       privateAllowed = await browser.extension.isAllowedIncognitoAccess();
+    } catch (_) {}
+    try {
+      marksKept = await browser.permissions.contains({ permissions: ["sessions"] });
     } catch (_) {}
     if (tab && tab.cookieStoreId && tab.cookieStoreId !== "firefox-default" && !tab.incognito) {
       try {

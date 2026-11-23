@@ -48,3 +48,11 @@ label.inline select { width: auto; }
 .ok-text { color: var(--ok); }
 .err-text { color: var(--err); }
 @media (max-width: 640px) { .sub { margin-left: 0; } }
+
+.version { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.countries { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 14px; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; }
+.countries label { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; }
+.countries .code { color: var(--muted); font-size: 11px; }
+#geoOpts .row { gap: 10px; align-items: center; }
+#geoOpts .check { margin: 0; white-space: nowrap; }
+.remember { gap: 10px; align-items: center; margin-top: 6px; }

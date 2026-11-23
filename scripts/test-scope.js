@@ -26,6 +26,9 @@ assert.strictEqual(TTScope.inScope({ tabId: 8, cookieStoreId: "firefox-default" 
 assert.strictEqual(TTScope.inScope({ tabId: -1 }, ctx()), false, "tabless direct");
 assert.strictEqual(TTScope.inScope({ tabId: -1 }, ctx({ tablessRoute: "vpn" })), true, "tabless via vpn");
 assert.strictEqual(TTScope.inScope({}, ctx()), false, "missing tabId = tabless");
+// ...but a VPN container covers its own tab-less requests (service workers, favicons).
+assert.strictEqual(TTScope.inScope({ tabId: -1, cookieStoreId: "firefox-container-2" }, ctx()), true, "tabless of a VPN container");
+assert.strictEqual(TTScope.inScope({ tabId: -1, cookieStoreId: "firefox-container-1" }, ctx()), false, "tabless of another container");
 // Private windows do not matter in "tabs" scope.
 assert.strictEqual(TTScope.inScope({ tabId: 8, incognito: true }, ctx()), false);
 

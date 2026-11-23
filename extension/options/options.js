@@ -261,7 +261,6 @@ function selectedScope() {
 function syncScope() {
   const scope = selectedScope();
   $("tabsOpts").hidden = scope !== "tabs";
-  $("privateOpts").hidden = scope !== "private";
 }
 for (const r of document.querySelectorAll('input[name="scope"]')) r.addEventListener("change", syncScope);
 
@@ -305,6 +304,115 @@ async function renderPrivateStatus() {
   box.append(el("span", allowed ? "ok-text" : "err-text", t(allowed ? "privAllowed" : "privNotAllowed")));
 }
 
+// "sessions" is asked for here, with the reason next to the button, not at install time.
+const SESSIONS = { permissions: ["sessions"] };
+
+async function renderRemember() {
+  let has = false;
+  try {
+    has = await browser.permissions.contains(SESSIONS);
+  } catch (_) {}
+  const box = $("rememberStatus");
+  box.textContent = "";
+  box.append(el("span", has ? "ok-text" : "err-text", t(has ? "rememberOn" : "rememberOff")));
+  $("rememberBtn").hidden = has;
+}
+
+$("rememberBtn").addEventListener("click", async () => {
+  try {
+    // Must be the first await of the click handler: Firefox wants a user action.
+    const ok = await browser.permissions.request(SESSIONS);
+    await renderRemember();
+    if (ok) Toast.ok(t("toastRememberOn"));
+    else Toast.error(t("toastRememberDenied"));
+  } catch (e) {
+    Toast.error(e.message);
+  }
+});
+
+// ------------------------------------------------------------------ countries (GEO)
+
+const geoSel = new Set();
+const uiLang = browser.i18n.getUILanguage();
+const COUNTRIES = TTGeo.CODES.map((code) => ({ code, name: TTGeo.nameOf(code, uiLang) })).sort((a, b) =>
+  a.name.localeCompare(b.name, uiLang)
+);
+
+function selectedGeoMode() {
+  return document.querySelector('input[name="geoMode"]:checked')?.value || "off";
+}
+
+function syncGeo() {
+  $("geoOpts").hidden = selectedGeoMode() === "off";
+  $("geoDnsUrlBox").hidden = $("geoDns").value !== "custom";
+}
+$("geoDns").addEventListener("change", syncGeo);
+for (const r of document.querySelectorAll('input[name="geoMode"]')) r.addEventListener("change", syncGeo);
+
+function renderGeoList() {
+  const q = $("geoSearch").value.trim().toLowerCase();
+  const onlySel = $("geoOnlySel").checked;
+  const root = $("geoList");
+  root.textContent = "";
+  for (const c of COUNTRIES) {
+    if (onlySel && !geoSel.has(c.code)) continue;
+    if (q && !c.name.toLowerCase().includes(q) && c.code.toLowerCase() !== q) continue;
+    const label = el("label");
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = geoSel.has(c.code);
+    box.addEventListener("change", () => {
+      if (box.checked) geoSel.add(c.code);
+      else geoSel.delete(c.code);
+      renderGeoCount();
+    });
+    label.append(box, el("span", "", c.name), el("span", "code", c.code));
+    root.append(label);
+  }
+  if (!root.childElementCount) root.append(el("div", "muted small", t("geoNothing")));
+  renderGeoCount();
+}
+
+function renderGeoCount() {
+  const names = COUNTRIES.filter((c) => geoSel.has(c.code)).map((c) => c.name);
+  $("geoCount").textContent = names.length ? t("geoSelected", names.length, names.join(", ")) : t("geoNoneSelected");
+}
+
+function renderGeoDb() {
+  const meta = state.settings.geoMeta;
+  const box = $("geoDbStatus");
+  box.textContent = "";
+  box.append(
+    meta
+      ? el("span", "ok-text", t("geoDbOk", meta.count.toLocaleString(uiLang), new Date(meta.updatedAt * 1000).toLocaleDateString(uiLang)))
+      : el("span", "err-text", t("geoDbMissing"))
+  );
+}
+
+$("geoSearch").addEventListener("input", renderGeoList);
+$("geoOnlySel").addEventListener("change", renderGeoList);
+$("geoClear").addEventListener("click", () => {
+  geoSel.clear();
+  renderGeoList();
+});
+
+async function updateGeoDb() {
+  const btn = $("geoUpdateBtn");
+  btn.disabled = true;
+  btn.textContent = t("geoUpdating");
+  try {
+    state = await api("geoUpdate");
+    renderGeoDb();
+    Toast.ok(t("toastGeoUpdated", state.settings.geoMeta.count.toLocaleString(uiLang)));
+  } catch (e) {
+    Toast.error(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t("geoUpdate");
+  }
+}
+$("geoUpdateBtn").addEventListener("click", updateGeoDb);
+
 async function renderHotkeys() {
   let cmds = [];
   try {
@@ -324,6 +432,16 @@ function fillSettings() {
   $("excludeList").value = s.excludeList.join("\n");
   $("includeList").value = s.includeList.join("\n");
   for (const k of ["bypassLocal", "killSwitch", "webrtcProtect"]) $(k).checked = !!s[k];
+  for (const r of document.querySelectorAll('input[name="geoMode"]')) r.checked = r.value === (s.geoMode || "off");
+  geoSel.clear();
+  for (const c of s.geoCountries || []) geoSel.add(c);
+  $("geoDns").value = s.geoDns === "custom" || TTDoh.SERVICES[s.geoDns] ? s.geoDns : TTDoh.DEFAULT;
+  $("geoDnsUrl").value = s.geoDnsUrl || "";
+  syncGeo();
+  renderGeoList();
+  renderGeoDb();
+  $("statsUrl").value = s.statsUrl || "";
+  $("version").textContent = state.version ? "v" + state.version : "";
 }
 
 $("saveBtn").addEventListener("click", async () => {
@@ -338,10 +456,17 @@ $("saveBtn").addEventListener("click", async () => {
   patch.tablessRoute = $("tablessRoute").value;
   const boxes = [...document.querySelectorAll(".container-box")];
   if (boxes.length) patch.vpnContainers = boxes.filter((b) => b.checked).map((b) => b.value);
+  patch.geoMode = selectedGeoMode();
+  patch.geoCountries = [...geoSel];
+  patch.geoDns = $("geoDns").value;
+  patch.geoDnsUrl = $("geoDnsUrl").value.trim();
+  patch.statsUrl = $("statsUrl").value.trim();
   try {
     state = await api("setSettings", { patch });
     fillSettings();
     Toast.ok(t("toastSaved"));
+    // Countries need the database: fetch it the first time they are switched on.
+    if (state.settings.geoMode !== "off" && !state.settings.geoMeta) await updateGeoDb();
   } catch (e) {
     Toast.error(e.message);
   }
@@ -362,7 +487,7 @@ browser.runtime.onMessage.addListener((msg) => {
     state = await api("getState");
     fillSettings();
     renderProfiles();
-    await Promise.all([renderContainers(), renderPrivateStatus(), renderHotkeys()]);
+    await Promise.all([renderContainers(), renderPrivateStatus(), renderHotkeys(), renderRemember()]);
   } catch (e) {
     Toast.error(e.message);
   }

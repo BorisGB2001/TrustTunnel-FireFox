@@ -38,6 +38,8 @@ TrustTunnel Browser Client connects Firefox to your own TrustTunnel server — t
 - Several servers, switchable from the toolbar
 - Split tunneling: everything except a list, or only listed sites; domains, IPs and subnets; one click to send the current site directly or via VPN
 - VPN only in marked tabs (popup switch, hotkey, "Open link in a VPN tab"), only in private windows, or containers that always use the VPN
+- Routing by country: selected countries without VPN, or only selected countries via VPN
+- Check IP: your address with the VPN and without it, optionally with country, provider and address type
 - Toolbar icon menu: VPN on/off, VPN in this tab, switch server; hotkeys
 - Kill switch: if the server is down, traffic does not bypass the VPN
 - WebRTC IP leak protection while the VPN is on
@@ -65,6 +67,8 @@ TrustTunnel — клиент для браузера подключает Firefo
 - Несколько серверов с переключением с панели инструментов
 - Раздельное туннелирование: всё, кроме списка, или только сайты из списка; домены, IP и подсети; текущий сайт — напрямую или через VPN одним нажатием
 - VPN только в отмеченных вкладках (переключатель, горячая клавиша, «Открыть ссылку во вкладке с VPN»), только в приватных окнах или в выбранных контейнерах
+- Маршрутизация по странам: отмеченные страны без VPN или через VPN только отмеченные страны
+- Проверка IP: адрес с VPN и без VPN, по желанию — страна, провайдер и тип адреса
 - Меню значка: вкл/выкл VPN, VPN в этой вкладке, выбор сервера; горячие клавиши
 - Kill switch: если сервер недоступен, трафик не идёт в обход VPN
 - Защита от утечки IP через WebRTC, пока VPN включён
@@ -92,6 +96,14 @@ Choose where the VPN works: all tabs, only tabs you mark (popup switch, Alt+Shif
 
 Выбор, где работает VPN: во всех вкладках, только в отмеченных (переключатель в окне, Alt+Shift+T, «Открыть ссылку во вкладке с VPN»; дочерние вкладки наследуют), в выбранных контейнерах Firefox или только в приватных окнах. Меню значка: вкл/выкл VPN и выбор сервера, горячая клавиша Alt+Shift+V. Смена логина или пароля сервера теперь действует сразу. Нужен Firefox 140 или новее.
 
+## Release notes 1.2.2 (en-US)
+
+Routing by country: tick countries that should open without the VPN (or the only ones that should use it); site lists still win. Check IP now shows your address with the VPN and without it, optionally with country, provider and address type. Optional Statistics button. Tabs marked "VPN in this tab" keep the VPN after a browser restart and when reopened. The version is shown in Settings. Fixes: private-window warning in every mode, IDN entries in site lists, a hang on broken TOML, tab-less requests of VPN containers, safer handling of routing errors.
+
+## Release notes 1.2.2 (ru)
+
+Маршрутизация по странам: отметьте страны, которые открываются без VPN (или единственные, что идут через VPN); списки сайтов по-прежнему важнее. «Проверить IP» показывает адрес с VPN и без VPN, по желанию — страну, провайдера и тип адреса. Кнопка «Статистика». Вкладки с отметкой «VPN в этой вкладке» сохраняют VPN после перезапуска браузера и при восстановлении закрытой вкладки. Версия видна в настройках. Исправления: предупреждение о приватных окнах в любом режиме, кириллические домены в списках, зависание на повреждённом TOML, запросы без вкладки в VPN-контейнерах, надёжнее обработка ошибок маршрутизации.
+
 ## Notes to reviewer (en-US) — "Notes for Reviewers" field
 
 This add-on is a client for TrustTunnel (https://github.com/TrustTunnel/TrustTunnel), an open-source VPN protocol by AdGuard. TrustTunnel is HTTP CONNECT over TLS with Basic auth, so the add-on uses `proxy.onRequest` to return `{type: "https", host, port, proxyAuthorizationHeader}` pointing to the user's own server.
@@ -104,13 +116,18 @@ Permissions:
 - `alarms` — the health check every 30 s.
 - `tabs` — show the current site's route in the popup; track which tabs are marked "VPN in this tab" (per-tab badge, closed tabs are forgotten).
 - `menus` — "Open link in a VPN tab" in the link context menu; toolbar icon menu (VPN on/off, VPN in this tab, server).
+- `sessions` (new in 1.2.2, **optional**: requested from a button in Settings, next to an explanation) — only `sessions.setTabValue/getTabValue/removeTabValue` with one boolean key: the "VPN in this tab" mark must survive a browser restart and "Reopen closed tab", otherwise a restored tab would silently leave the VPN. The add-on does not read the list of closed tabs or windows.
 - `contextualIdentities` — list the user's containers in Settings so they can choose containers that always use the VPN. Container data is not stored or sent anywhere except the chosen cookieStoreIds in storage.local.
 
 No remote code, no minified or bundled code, no analytics. Network requests made by the add-on itself:
 - `https://www.gstatic.com/generate_204` — connectivity check, sent through the user's tunnel.
-- `https://api.ipify.org` — only when the user clicks "Check IP".
+- `https://api.ipify.org` — only when the user clicks "Check IP" (two requests: through the tunnel and direct).
+- `https://proxycheck.io/v3/<ip>` — only after the user opts in from the popup (setting `ipInfo`, off by default): country, provider and type of the two addresses shown by "Check IP".
+- `https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country/geo-whois-asn-country-ipv4-num.csv` — only when the user presses "Update database": data only (CSV of IP ranges and country codes), parsed into typed arrays and kept in IndexedDB; no code is loaded.
+- DNS over HTTPS (RFC 8484, `?dns=<query>`) to the service chosen in Settings — `https://cloudflare-dns.com/dns-query` (default), `https://dns.google/dns-query`, `https://unfiltered.adguard-dns.com/dns-query` or the user's own https URL — only while the user has routing by country on: the site's IPv4 address is looked up in the country database. The request is forced through the user's tunnel, never sent directly.
+- `privacy.network.networkPredictionEnabled` is set to false while the VPN is on, so prefetch does not bypass the tunnel.
 
-Testing requires a TrustTunnel server (installation: `curl -fsSL https://raw.githubusercontent.com/TrustTunnel/TrustTunnel/refs/heads/master/scripts/install.sh | sh -s -`, then `setup_wizard`). The tt:// and TOML parsers and the tab/private/container routing can be checked without a server: `node scripts/test-config.js` and `node scripts/test-scope.js` in the repository; `python3 scripts/e2e-firefox.py --fake` runs Firefox against a local fake TrustTunnel server.
+Testing requires a TrustTunnel server (installation: `curl -fsSL https://raw.githubusercontent.com/TrustTunnel/TrustTunnel/refs/heads/master/scripts/install.sh | sh -s -`, then `setup_wizard`). The tt:// and TOML parsers and the tab/private/container routing can be checked without a server: `node scripts/test-config.js`, `node scripts/test-scope.js` and `node scripts/test-geo.js` in the repository; `python3 scripts/e2e-firefox.py --fake` runs Firefox against a local fake TrustTunnel server.
 
 ## Images
 

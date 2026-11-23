@@ -13,7 +13,11 @@
 const HEALTH_ALARM = "tt-health";
 const HEALTH_URL = "https://www.gstatic.com/generate_204";
 const IP_URL = "https://api.ipify.org/?format=json";
-const IP_NONCE_RE = /[?&]tt-ip=([a-z0-9]+)/;
+const IP_INFO_URL = "https://proxycheck.io/v3/"; // country, provider and kind of an IP (opt-in)
+// Site names are resolved for GEO routing with DNS over HTTPS (lib/doh.js), sent through
+// the tunnel: the local resolver (and the provider behind it) never sees them.
+const DNS_TTL = 10 * 60 * 1000;
+const DNS_CACHE_MAX = 2000;
 
 const DEFAULTS = {
   enabled: false,
@@ -29,6 +33,13 @@ const DEFAULTS = {
   inheritOpener: true, // tabs opened from a VPN tab get VPN too
   tablessRoute: "direct", // requests without a tab in "tabs" scope: "direct" | "vpn"
   vpnContainers: [], // cookieStoreIds whose tabs always use the VPN in "tabs" scope
+  geoMode: "off", // countries: "off" | "direct" (listed go direct) | "vpn" (only listed via VPN)
+  geoCountries: [], // ISO codes
+  geoMeta: null, // {count, updatedAt} of the downloaded country database
+  geoDns: "cloudflare", // DNS-over-HTTPS service for GEO: "cloudflare" | "google" | "adguard" | "custom"
+  geoDnsUrl: "", // the user's own DoH server when geoDns is "custom"
+  statsUrl: "", // "Statistics" button in the popup (e.g. a TrustPanel portal)
+  ipInfo: false, // "Check IP" also asks proxycheck.io about the addresses (opt-in)
 };
 
 let settings = { ...DEFAULTS };
@@ -39,22 +50,34 @@ let authFails = 0;
 // Tabs marked "VPN in this tab". Kept in storage.session: survives a restart of the
 // background page, not of the browser (tab ids change then anyway).
 const vpnTabs = new Set();
-// tabId -> Promise of the one-time "inherit VPN from the opener tab" check.
+// tabId -> Promise of a running "inherit VPN from the opener tab" check.
 const openerChecks = new Map();
-// nonce -> request context of a "Check IP" request made on behalf of a tab.
-const ipChecks = new Map();
+// Tabs whose inheritance is already decided (checked once, or set by hand). Kept in
+// storage.session too: a restart of the background page must not decide again.
+const openerDone = new Set();
+// url -> "vpn" | "direct": our own "Check IP" requests with a forced route.
+const forcedRoutes = new Map();
 
 const ready = (async () => {
   const stored = await browser.storage.local.get(Object.keys(DEFAULTS));
   settings = { ...DEFAULTS, ...stored };
   try {
-    const s = await browser.storage.session.get(["rt", "vpnTabs"]);
+    const s = await browser.storage.session.get(["rt", "vpnTabs", "openerDone"]);
     if (s.rt) rt = { ...rt, ...s.rt };
-    if (Array.isArray(s.vpnTabs)) {
-      const open = new Set((await browser.tabs.query({})).map((tab) => tab.id));
-      for (const id of s.vpnTabs) if (open.has(id)) vpnTabs.add(id);
-    }
+    const open = new Set((await browser.tabs.query({})).map((tab) => tab.id));
+    for (const id of s.vpnTabs || []) if (open.has(id)) vpnTabs.add(id);
+    for (const id of s.openerDone || []) if (open.has(id)) openerDone.add(id);
+    // After a browser restart storage.session is empty and tab ids are new: the mark
+    // travels with the tab itself (session store), so restored tabs keep their VPN.
+    await Promise.all([...open].filter((id) => !openerDone.has(id)).map(restoreTabMark));
   } catch (_) {}
+  if (settings.enabled) {
+    // The alarm is gone after the add-on was disabled and enabled again.
+    try {
+      if (!(await browser.alarms.get(HEALTH_ALARM))) browser.alarms.create(HEALTH_ALARM, { periodInMinutes: 0.5 });
+    } catch (_) {}
+  }
+  if (settings.geoMode !== "off") await loadGeo();
   updateBadge();
 })();
 
@@ -144,9 +167,37 @@ async function refreshTabBadges() {
 
 // ------------------------------------------------------------------ VPN tabs
 
+const TAB_MARK = "vpn"; // sessions.setTabValue key
+
+/**
+ * Remember the mark in the tab's own session data (survives restart and "undo close tab").
+ * Needs the optional "sessions" permission; without it marks last until the browser closes.
+ */
+function saveTabMark(tabId, value) {
+  if (!browser.sessions) return undefined;
+  try {
+    return ignoreErr(value ? browser.sessions.setTabValue(tabId, TAB_MARK, true) : browser.sessions.removeTabValue(tabId, TAB_MARK));
+  } catch (_) {
+    return undefined;
+  }
+}
+
+/** Read the mark of a restored tab. Returns true when the tab was marked. */
+async function restoreTabMark(tabId) {
+  if (!browser.sessions) return false;
+  try {
+    if ((await browser.sessions.getTabValue(tabId, TAB_MARK)) !== true) return false;
+  } catch (_) {
+    return false;
+  }
+  vpnTabs.add(tabId);
+  openerDone.add(tabId);
+  return true;
+}
+
 async function persistVpnTabs() {
   try {
-    await browser.storage.session.set({ vpnTabs: [...vpnTabs] });
+    await browser.storage.session.set({ vpnTabs: [...vpnTabs], openerDone: [...openerDone] });
   } catch (_) {}
 }
 
@@ -154,8 +205,8 @@ async function setTabVpn(tabId, value) {
   if (typeof tabId !== "number" || tabId < 0) throw new Error(t("errNoTab"));
   if (value) vpnTabs.add(tabId);
   else vpnTabs.delete(tabId);
-  openerChecks.set(tabId, Promise.resolve());
-  await persistVpnTabs();
+  openerDone.add(tabId); // a manual choice: never inherit over it
+  await Promise.all([persistVpnTabs(), saveTabMark(tabId, value)]);
   try {
     applyTabBadge(await browser.tabs.get(tabId));
   } catch (_) {}
@@ -164,26 +215,41 @@ async function setTabVpn(tabId, value) {
   else notifyPages();
 }
 
-/** First request of a tab we have not seen: inherit VPN from its opener tab. */
+/**
+ * First request of a tab we have not seen: a restored tab gets its saved mark back,
+ * a new one may inherit the VPN from its opener tab.
+ */
 function inheritFromOpener(tabId) {
-  if (typeof tabId !== "number" || tabId < 0 || vpnTabs.has(tabId)) return null;
-  if (!settings.inheritOpener) return null;
+  if (typeof tabId !== "number" || tabId < 0 || vpnTabs.has(tabId) || openerDone.has(tabId)) return null;
   let check = openerChecks.get(tabId);
   if (!check) {
     check = (async () => {
       try {
         const tab = await browser.tabs.get(tabId);
-        if (tab.openerTabId != null && vpnTabs.has(tab.openerTabId)) {
+        let marked = await restoreTabMark(tabId);
+        if (!marked && settings.inheritOpener && tab.openerTabId != null && vpnTabs.has(tab.openerTabId)) {
+          marked = true;
           vpnTabs.add(tabId);
-          await persistVpnTabs();
-          applyTabBadge(tab);
+          saveTabMark(tabId, true);
         }
+        openerDone.add(tabId);
+        await persistVpnTabs();
+        if (marked) applyTabBadge(tab);
       } catch (_) {}
+      openerChecks.delete(tabId);
     })();
     openerChecks.set(tabId, check);
   }
   return check;
 }
+
+// The user allowed "sessions" in Settings: store the marks that already exist.
+browser.permissions.onAdded.addListener(async (perms) => {
+  if (!(perms.permissions || []).includes("sessions")) return;
+  await ready;
+  for (const id of vpnTabs) saveTabMark(id, true);
+  notifyPages();
+});
 
 browser.tabs.onCreated.addListener(async (tab) => {
   await ready;
@@ -194,7 +260,8 @@ browser.tabs.onCreated.addListener(async (tab) => {
 browser.tabs.onRemoved.addListener(async (tabId) => {
   await ready;
   openerChecks.delete(tabId);
-  if (vpnTabs.delete(tabId)) await persistVpnTabs();
+  const had = openerDone.delete(tabId);
+  if (vpnTabs.delete(tabId) || had) await persistVpnTabs();
 });
 
 browser.tabs.onUpdated.addListener(async (tabId, change, tab) => {
@@ -211,6 +278,7 @@ async function openVpnTab(url, opener) {
     windowId: opener ? opener.windowId : undefined,
     index: opener ? opener.index + 1 : undefined,
     openerTabId: opener ? opener.id : undefined,
+    cookieStoreId: opener ? opener.cookieStoreId : undefined, // stay in the opener's container
   });
   await setTabVpn(tab.id, true);
   await browser.tabs.update(tab.id, { url });
@@ -225,6 +293,15 @@ async function applyWebRtc(on) {
     else await setting.clear({});
   } catch (e) {
     console.warn("WebRTC policy:", e);
+  }
+  // DNS prefetch and speculative connections would name the sites to the local
+  // resolver and open tab-less connections past the tunnel.
+  try {
+    const predict = browser.privacy.network.networkPredictionEnabled;
+    if (on) await predict.set({ value: false });
+    else await predict.clear({});
+  } catch (e) {
+    console.warn("network prediction:", e);
   }
 }
 
@@ -277,34 +354,161 @@ function proxyFor(p) {
   };
 }
 
+// ------------------------------------------------------------------ countries (GEO)
+
+let geoDb = null; // {starts, ends, cc, count} or null
+let geoLoading = null;
+const dnsCache = new Map(); // host -> {at, country: Promise<string|null>}
+
+function idb(mode, run) {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open("tt-geo", 1);
+    open.onupgradeneeded = () => open.result.createObjectStore("kv");
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const tx = open.result.transaction("kv", mode);
+      const req = run(tx.objectStore("kv"));
+      tx.oncomplete = () => {
+        open.result.close();
+        resolve(req && req.result);
+      };
+      tx.onerror = tx.onabort = () => {
+        open.result.close();
+        reject(tx.error);
+      };
+    };
+  });
+}
+
+function loadGeo() {
+  if (!geoLoading)
+    geoLoading = idb("readonly", (st) => st.get("db"))
+      .then((db) => {
+        geoDb = db && db.count ? db : null;
+      })
+      .catch((e) => console.warn("geo database:", e));
+  return geoLoading;
+}
+
+/** IPv4 addresses of a host, asked over HTTPS through the tunnel. */
+async function resolveViaVpn(host) {
+  const url = TTDoh.queryUrl(TTDoh.endpoint(settings), host);
+  if (!url) throw new Error("no DNS service");
+  return TTDoh.parseAnswer(await fetchVia(url, "vpn", 5000, { accept: "application/dns-message" }, "bytes"));
+}
+
+/**
+ * Country of a host's server (ISO code) or null. The name is resolved through the
+ * VPN, so without a working tunnel the country is unknown.
+ */
+async function countryOf(host) {
+  if (!geoDb) await loadGeo();
+  if (!geoDb) return null;
+  host = String(host || "").toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  const literal = TTRules.ipv4ToInt(host);
+  if (literal !== null) return TTGeo.lookup(geoDb, literal);
+  if (!host || host.includes(":")) return null; // IPv6 literal: not in the database
+  if (!settings.enabled || !currentProfile()) return null;
+  const now = Date.now();
+  let hit = dnsCache.get(host);
+  if (!hit || now - hit.at > DNS_TTL) {
+    if (dnsCache.size >= DNS_CACHE_MAX) dnsCache.clear();
+    hit = {
+      at: now,
+      country: resolveViaVpn(host).then(
+        (addresses) => {
+          for (const addr of addresses) {
+            const n = TTRules.ipv4ToInt(addr);
+            const c = n === null ? null : TTGeo.lookup(geoDb, n);
+            if (c) return c;
+          }
+          return null;
+        },
+        () => {
+          dnsCache.delete(host); // tunnel down or resolver error: ask again next time
+          return null;
+        }
+      ),
+    };
+    dnsCache.set(host, hit);
+  }
+  return hit.country;
+}
+
+async function geoUpdate() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 90000);
+  let db;
+  try {
+    const r = await fetch(TTGeo.DB_URL, { cache: "no-store", credentials: "omit", signal: ctrl.signal });
+    if (!r.ok) throw new Error(t("errGeoHttp", r.status));
+    db = TTGeo.parseCsv(await r.text());
+  } catch (e) {
+    throw new Error(e && e.name === "AbortError" ? t("errTimeout") : t("errGeoDownload", e && e.message ? e.message : String(e)));
+  } finally {
+    clearTimeout(timer);
+  }
+  if (db.count < 1000) throw new Error(t("errGeoFormat"));
+  await idb("readwrite", (st) => st.put(db, "db"));
+  geoDb = db;
+  geoLoading = Promise.resolve();
+  dnsCache.clear();
+  await saveSettings({ geoMeta: { count: db.count, updatedAt: Math.floor(Date.now() / 1000) } });
+  return getState();
+}
+
+/** Would a request of this tab context to this host use the VPN (when it is on)? */
+async function wantsVpn(req, host) {
+  if (!TTScope.inScope(req, scopeCtx())) return false;
+  const country = TTRules.needsCountry(host, settings) ? await countryOf(host) : null;
+  return TTRules.route(host, settings, country);
+}
+
+async function routeRequest(details) {
+  if (!settings.enabled) return DIRECT;
+  const p = currentProfile();
+  // Our own health probe always goes through the tunnel and never fails over.
+  if (p && healthNonce && details.url.includes("tt-health=" + healthNonce)) return proxyFor(p);
+  // "Check IP": one request forced through the tunnel, one forced direct.
+  const forced = forcedRoutes.get(details.url);
+  if (forced === "direct") return DIRECT;
+  // Forced through the tunnel and never around it (a name lookup must not leak).
+  if (forced === "vpn") return p ? proxyFor(p) : BLACKHOLE;
+
+  if (settings.scope === "tabs") await inheritFromOpener(details.tabId);
+  if (!TTScope.inScope(details, scopeCtx())) return DIRECT;
+
+  let host;
+  try {
+    host = new URL(details.url).hostname;
+  } catch (_) {
+    return DIRECT;
+  }
+  // The VPN server itself is always reached directly (e.g. opening it to check the certificate).
+  if (p && p.kind !== "socks" && host === p.hostname) return DIRECT;
+  const country = TTRules.needsCountry(host, settings) ? await countryOf(host) : null;
+  if (!TTRules.route(host, settings, country)) return DIRECT;
+  if (!p) return settings.killSwitch ? BLACKHOLE : DIRECT;
+  // Kill switch on: only the tunnel, the request fails if it is down.
+  // Kill switch off: Firefox falls back to a direct connection.
+  return settings.killSwitch ? proxyFor(p) : [proxyFor(p), DIRECT];
+}
+
 browser.proxy.onRequest.addListener(
   async (details) => {
-    await ready;
-    if (!settings.enabled) return DIRECT;
-    const p = currentProfile();
-    // Our own health probe always goes through the tunnel and never fails over.
-    if (p && healthNonce && details.url.includes("tt-health=" + healthNonce)) return proxyFor(p);
-
-    // "Check IP" from the popup is routed as if it came from that tab.
-    let req = details;
-    const ip = IP_NONCE_RE.exec(details.url);
-    if (ip && ipChecks.has(ip[1])) req = { ...details, ...ipChecks.get(ip[1]) };
-    else if (settings.scope === "tabs") await inheritFromOpener(details.tabId);
-    if (!TTScope.inScope(req, scopeCtx())) return DIRECT;
-
-    if (!p) return settings.killSwitch ? BLACKHOLE : DIRECT;
-    let host;
     try {
-      host = new URL(details.url).hostname;
-    } catch (_) {
+      await ready;
+    } catch (e) {
+      console.error("state not loaded, routing direct:", e); // enabled or not is unknown
       return DIRECT;
     }
-    // The VPN server itself is always reached directly (e.g. opening it to check the certificate).
-    if (p.kind !== "socks" && host === p.hostname) return DIRECT;
-    if (!TTRules.shouldTunnel(host, settings)) return DIRECT;
-    // Kill switch on: only the tunnel, the request fails if it is down.
-    // Kill switch off: Firefox falls back to a direct connection.
-    return settings.killSwitch ? proxyFor(p) : [proxyFor(p), DIRECT];
+    try {
+      return await routeRequest(details);
+    } catch (e) {
+      // Never fail open: an error here must not send a VPN request around the tunnel.
+      console.error("routing failed:", e);
+      return settings.enabled && settings.killSwitch ? BLACKHOLE : DIRECT;
+    }
   },
   { urls: ["<all_urls>"] }
 );
@@ -317,9 +521,9 @@ browser.webRequest.onAuthRequired.addListener(
     await ready;
     const p = currentProfile();
     if (!details.isProxy || !settings.enabled || !p) return {};
-    const sameHost = p.kind === "socks" || (details.challenger && details.challenger.host === p.hostname);
-    if (!sameHost) return {};
-    if (p.kind === "socks" || ++authFails > 3) {
+    // Only our own HTTPS server: a 407 from any other proxy is not ours to answer.
+    if (p.kind === "socks" || !details.challenger || details.challenger.host !== p.hostname) return {};
+    if (++authFails > 3) {
       await setRuntime({ status: "error", error: t("errAuth407") });
       return { cancel: true };
     }
@@ -369,7 +573,14 @@ function explain(e, code) {
   return msg;
 }
 
-async function healthCheck({ quiet = false } = {}) {
+// Checks run one at a time: they share the nonce and the error code.
+let healthQueue = Promise.resolve();
+function healthCheck(opts) {
+  healthQueue = healthQueue.then(() => runHealthCheck(opts)).catch((e) => console.warn("health check:", e));
+  return healthQueue;
+}
+
+async function runHealthCheck({ quiet = false } = {}) {
   if (!settings.enabled) return;
   const p = currentProfile();
   if (!p) {
@@ -524,7 +735,13 @@ function publicProfile(p) {
 
 async function getState() {
   const { profiles, ...s } = settings;
-  return { settings: s, profiles: profiles.map(publicProfile), runtime: rt, vpnTabs: [...vpnTabs] };
+  return {
+    settings: s,
+    profiles: profiles.map(publicProfile),
+    runtime: rt,
+    vpnTabs: [...vpnTabs],
+    version: browser.runtime.getManifest().version,
+  };
 }
 
 function cleanProfile(input, old = {}) {
@@ -578,26 +795,85 @@ async function deleteProfile({ id }) {
   return {};
 }
 
-/**
- * External IP as seen by a tab: the request is routed with that tab's context.
- * tab: {tabId, incognito, cookieStoreId} of the popup's active tab (optional).
- */
-async function checkIp({ tab } = {}) {
-  const nonce = Math.random().toString(36).slice(2);
-  const ctx = tab ? { tabId: tab.tabId, incognito: !!tab.incognito, cookieStoreId: tab.cookieStoreId } : { tabId: -1 };
-  ipChecks.set(nonce, ctx);
+const fetchJson = (url, force, ms, headers) => fetchVia(url, force, ms, headers, "json");
+
+/** fetch with a timeout and a forced route ("vpn" | "direct" | null); as: "json" | "bytes". */
+async function fetchVia(url, force, ms = 10000, headers = undefined, as = "json") {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10000);
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  if (force) forcedRoutes.set(url, force);
   try {
-    const r = await fetch(IP_URL + "&tt-ip=" + nonce, { cache: "no-store", credentials: "omit", signal: ctrl.signal });
-    const j = await r.json();
-    const viaVpn =
-      settings.enabled && TTScope.inScope(ctx, scopeCtx()) && TTRules.shouldTunnel("api.ipify.org", settings);
-    return { ip: j.ip, viaVpn };
+    const r = await fetch(url, { cache: "no-store", credentials: "omit", signal: ctrl.signal, headers });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return as === "bytes" ? await r.arrayBuffer() : await r.json();
+  } catch (e) {
+    throw new Error(e && e.name === "AbortError" ? t("errTimeout") : e && e.message ? e.message : String(e));
   } finally {
     clearTimeout(timer);
-    ipChecks.delete(nonce);
+    forcedRoutes.delete(url);
   }
+}
+
+const rnd = () => Math.random().toString(36).slice(2);
+
+async function ipVia(force) {
+  try {
+    const j = await fetchJson(IP_URL + "&n=" + rnd(), force);
+    if (!j || typeof j.ip !== "string" || !/^[0-9a-f.:]{3,45}$/i.test(j.ip)) throw new Error(t("errIpAnswer"));
+    return { ip: j.ip };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+const IP_KINDS = ["residential", "wireless", "business", "hosting", "education", "government"];
+
+/** Country, provider and kind of an address from proxycheck.io (only when the user enabled it). */
+async function ipDetails(ip, force) {
+  try {
+    const j = await fetchJson(IP_INFO_URL + encodeURIComponent(ip), force);
+    const d = j && j[ip];
+    if (!d) return null;
+    const det = d.detections || {};
+    const net = d.network || {};
+    const loc = d.location || {};
+    let kind = String(net.type || "").toLowerCase();
+    if (det.tor) kind = "tor";
+    else if (det.vpn) kind = "vpn";
+    else if (det.proxy) kind = "proxy";
+    else if (det.hosting) kind = "hosting";
+    else if (!IP_KINDS.includes(kind)) kind = "other";
+    const str = (v) => (typeof v === "string" ? v.slice(0, 80) : "");
+    const code = str(loc.country_code).toUpperCase();
+    return { kind, provider: str(net.provider || net.organisation), country: /^[A-Z]{2}$/.test(code) ? code : "" };
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * External addresses with the VPN and without it, and which of the two the
+ * popup's tab uses for the site it shows.
+ * tab: {tabId, incognito, cookieStoreId}; host: the tab's site (both optional).
+ */
+async function checkIp({ tab, host } = {}) {
+  const hasVpn = settings.enabled && !!currentProfile();
+  const [vpn, direct] = await Promise.all([hasVpn ? ipVia("vpn") : null, ipVia("direct")]);
+  if (settings.ipInfo) {
+    // Ask through the tunnel when it works, so the lookup itself does not come from the real address.
+    const force = vpn && vpn.ip ? "vpn" : "direct";
+    await Promise.all([vpn, direct].filter((x) => x && x.ip).map(async (x) => (x.info = await ipDetails(x.ip, force))));
+  }
+  let tabVia = null;
+  if (settings.enabled) tabVia = (await wantsVpn(tab || { tabId: -1 }, host || "api.ipify.org")) ? "vpn" : "direct";
+  return { vpn, direct, tabVia, ipInfo: !!settings.ipInfo };
+}
+
+/** Route of a site for the popup: via the VPN or not, and the site's country when GEO is on. */
+async function routeInfo({ tab, host }) {
+  const country = settings.geoMode !== "off" ? await countryOf(host) : null;
+  const tunneled = TTScope.inScope(tab || { tabId: -1 }, scopeCtx()) && TTRules.route(host, settings, TTRules.needsCountry(host, settings) ? country : null);
+  return { tunneled, country, geo: settings.geoMode !== "off", geoReady: !!geoDb };
 }
 
 const handlers = {
@@ -609,7 +885,8 @@ const handlers = {
   async setSettings({ patch }) {
     const allowed = [
       "profileId", "mode", "excludeList", "includeList", "bypassLocal", "killSwitch", "webrtcProtect",
-      "scope", "inheritOpener", "tablessRoute", "vpnContainers",
+      "scope", "inheritOpener", "tablessRoute", "vpnContainers", "geoMode", "geoCountries", "statsUrl", "ipInfo",
+      "geoDns", "geoDnsUrl",
     ];
     const clean = {};
     for (const k of allowed) if (k in patch) clean[k] = patch[k];
@@ -621,13 +898,34 @@ const handlers = {
     if ("inheritOpener" in clean) clean.inheritOpener = !!clean.inheritOpener;
     if ("vpnContainers" in clean)
       clean.vpnContainers = Array.isArray(clean.vpnContainers) ? clean.vpnContainers.filter((x) => typeof x === "string") : [];
+    if ("geoMode" in clean && !["off", "direct", "vpn"].includes(clean.geoMode)) clean.geoMode = "off";
+    if ("geoCountries" in clean) clean.geoCountries = TTGeo.cleanCodes(clean.geoCountries);
+    if ("ipInfo" in clean) clean.ipInfo = !!clean.ipInfo;
+    if ("geoDns" in clean && clean.geoDns !== "custom" && !TTDoh.SERVICES[clean.geoDns]) clean.geoDns = TTDoh.DEFAULT;
+    if ("geoDnsUrl" in clean) clean.geoDnsUrl = String(clean.geoDnsUrl || "").trim();
+    if (("geoDns" in clean ? clean.geoDns : settings.geoDns) === "custom") {
+      const own = TTDoh.cleanUrl("geoDnsUrl" in clean ? clean.geoDnsUrl : settings.geoDnsUrl);
+      if (!own) throw new Error(t("errDnsUrl"));
+      clean.geoDnsUrl = own;
+    }
+    if ("statsUrl" in clean) {
+      const raw = String(clean.statsUrl || "").trim();
+      let ok = !raw;
+      try {
+        ok = ok || /^https?:$/.test(new URL(raw).protocol);
+      } catch (_) {}
+      if (!ok) throw new Error(t("errStatsUrl"));
+      clean.statsUrl = raw;
+    }
     if ("profileId" in clean && clean.profileId && !settings.profiles.some((p) => p.id === clean.profileId))
       throw new Error(t("errNoSuchServer"));
     const changedServer = "profileId" in clean && clean.profileId !== settings.profileId;
     await saveSettings(clean);
+    if (settings.geoMode !== "off") await loadGeo();
     if ("webrtcProtect" in clean && settings.enabled) await applyWebRtc(true);
     if (["scope", "vpnContainers", "profileId"].some((k) => k in clean)) rebuildMenus();
     updateBadge();
+    if (changedServer || "geoDns" in clean || "geoDnsUrl" in clean) dnsCache.clear(); // another vantage point or resolver
     if (changedServer && settings.enabled) {
       authFails = 0;
       await setRuntime({ status: "connecting", error: null, since: null });
@@ -662,6 +960,8 @@ const handlers = {
     return getState();
   },
   checkIp,
+  routeInfo,
+  geoUpdate,
 };
 
 browser.runtime.onMessage.addListener((msg, sender) => {

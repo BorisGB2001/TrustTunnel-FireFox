@@ -12,7 +12,7 @@
   <header class="row">
     <img src="../icons/icon-on.svg" width="32" height="32" alt="">
     <div class="grow">
-      <h1 data-i18n="extName"></h1>
+      <h1><span data-i18n="extName"></span> <span class="version" id="version"></span></h1>
       <div class="muted small" data-i18n="optIntro"></div>
     </div>
   </header>
@@ -78,15 +78,21 @@
         </select>
       </label>
       <div>
+        <div><b data-i18n="optRemember"></b></div>
+        <div class="muted small" data-i18n="rememberHint"></div>
+        <div class="row remember">
+          <span id="rememberStatus" class="small grow"></span>
+          <button type="button" id="rememberBtn" data-i18n="rememberAllow"></button>
+        </div>
+      </div>
+      <div>
         <div><b data-i18n="optContainers"></b></div>
         <div class="muted small" data-i18n="optContainersHint"></div>
         <div id="containers" class="containers"></div>
       </div>
     </div>
 
-    <div class="sub" id="privateOpts">
-      <div id="privStatus" class="small"></div>
-    </div>
+    <div id="privStatus" class="small"></div>
 
     <p class="muted small" id="hotkeys"></p>
   </section>
@@ -110,10 +116,53 @@
   </section>
 
   <section class="card">
+    <h2 data-i18n="optGeo"></h2>
+    <div class="modes">
+      <label class="radio"><input type="radio" name="geoMode" value="off"> <span><b data-i18n="geoOff"></b><br><span class="muted small" data-i18n="geoOffHint"></span></span></label>
+      <label class="radio"><input type="radio" name="geoMode" value="direct"> <span><b data-i18n="geoDirect"></b><br><span class="muted small" data-i18n="geoDirectHint"></span></span></label>
+      <label class="radio"><input type="radio" name="geoMode" value="vpn"> <span><b data-i18n="geoVpn"></b><br><span class="muted small" data-i18n="geoVpnHint"></span></span></label>
+    </div>
+    <div class="sub" id="geoOpts">
+      <div class="row">
+        <input type="search" id="geoSearch" class="grow" data-i18n-placeholder="geoSearch">
+        <label class="check"><input type="checkbox" id="geoOnlySel"> <span data-i18n="geoOnlySelected"></span></label>
+        <button type="button" id="geoClear" data-i18n="geoClear"></button>
+      </div>
+      <div class="small muted" id="geoCount"></div>
+      <div id="geoList" class="countries"></div>
+      <div class="row">
+        <span class="grow small" id="geoDbStatus"></span>
+        <button type="button" id="geoUpdateBtn" data-i18n="geoUpdate"></button>
+      </div>
+      <label class="inline"><span data-i18n="geoDnsLabel"></span>
+        <select id="geoDns">
+          <option value="cloudflare">Cloudflare (cloudflare-dns.com)</option>
+          <option value="google">Google (dns.google)</option>
+          <option value="adguard">AdGuard DNS (unfiltered.adguard-dns.com)</option>
+          <option value="custom" data-i18n="geoDnsCustom"></option>
+        </select>
+      </label>
+      <label id="geoDnsUrlBox"><span data-i18n="geoDnsUrlLabel"></span>
+        <input type="url" id="geoDnsUrl" spellcheck="false" placeholder="https://dns.example.com/dns-query">
+      </label>
+      <p class="muted small" data-i18n="geoHint"></p>
+    </div>
+  </section>
+
+  <section class="card">
     <h2 data-i18n="optProtection"></h2>
     <label class="check"><input type="checkbox" id="killSwitch"> <span data-i18n="optKillSwitch"></span></label>
     <label class="check"><input type="checkbox" id="webrtcProtect"> <span data-i18n="optWebrtc"></span></label>
     <p class="muted small" data-i18n="optDnsHint"></p>
+  </section>
+
+  <section class="card">
+    <h2 data-i18n="optStats"></h2>
+    <label><span data-i18n="statsUrlLabel"></span>
+      <input type="url" id="statsUrl" spellcheck="false" placeholder="https://panel.example.com/portal">
+    </label>
+    <p class="muted small"><span data-i18n="statsHint"></span>
+      <a href="https://github.com/BorisGB2001/TrustPanel" target="_blank" rel="noopener noreferrer">github.com/BorisGB2001/TrustPanel</a></p>
   </section>
 
   <div class="actions">
@@ -135,6 +184,8 @@
 <script src="../lib/i18n.js"></script>
 <script src="../lib/rules.js"></script>
 <script src="../lib/scope.js"></script>
+<script src="../lib/geo.js"></script>
+<script src="../lib/doh.js"></script>
 <script src="../lib/config.js"></script>
 <script src="../lib/api.js"></script>
 <script src="../lib/toast.js"></script>

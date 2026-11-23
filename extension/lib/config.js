@@ -159,6 +159,7 @@ const TTConfig = (() => {
       }
       if (text[i] === "'") {
         const end = text.indexOf("'", i + 1);
+        if (end < 0) throw new Error(t("errTomlValue"));
         const raw = text.slice(i + 1, end);
         i = end + 1;
         return raw;
@@ -190,6 +191,7 @@ const TTConfig = (() => {
       if (i >= n) break;
       if (text[i] === "[") {
         const end = text.indexOf("]", i);
+        if (end < 0) throw new Error(t("errTomlUnexpected", text.slice(i, i + 20).split("\n")[0]));
         const arrTable = text[i + 1] === "[";
         const name = text.slice(i + (arrTable ? 2 : 1), end).trim();
         i = end + (arrTable ? 2 : 1);

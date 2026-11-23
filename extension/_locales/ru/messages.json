@@ -260,12 +260,6 @@
   "toastListUpdated": {
     "message": "Список обновлён. Перезагрузите вкладку, чтобы применить."
   },
-  "toastIpVpn": {
-    "message": "Внешний IP: $1 (через VPN)"
-  },
-  "toastIpDirect": {
-    "message": "Внешний IP: $1 (напрямую)"
-  },
   "toastIpFailed": {
     "message": "Не удалось проверить IP: $1"
   },
@@ -589,5 +583,179 @@
   },
   "hotkeysHint": {
     "message": "Изменить: about:addons → ⚙ → Управление горячими клавишами расширений."
+  },
+  "privNotCovered": {
+    "message": "Приватные окна не защищены: расширению там не разрешено работать, поэтому они идут мимо VPN и kill switch. about:addons → TrustTunnel → «Запуск в приватных окнах» → Разрешить."
+  },
+  "popupStats": {
+    "message": "Статистика"
+  },
+  "ipWithVpn": {
+    "message": "С VPN"
+  },
+  "ipWithoutVpn": {
+    "message": "Без VPN"
+  },
+  "ipVpnOff": {
+    "message": "VPN выключен"
+  },
+  "ipFailed": {
+    "message": "ошибка: $1"
+  },
+  "ipTabVpn": {
+    "message": "Эта вкладка выходит с адреса VPN."
+  },
+  "ipTabDirect": {
+    "message": "Эта вкладка идёт напрямую, без VPN."
+  },
+  "ipInfoEnable": {
+    "message": "Показать страну, провайдера и тип адреса (эти два адреса будут отправлены на proxycheck.io)"
+  },
+  "ipKind_vpn": {
+    "message": "VPN"
+  },
+  "ipKind_proxy": {
+    "message": "Прокси"
+  },
+  "ipKind_tor": {
+    "message": "Tor"
+  },
+  "ipKind_hosting": {
+    "message": "Хостинг"
+  },
+  "ipKind_residential": {
+    "message": "Домашний"
+  },
+  "ipKind_wireless": {
+    "message": "Мобильный"
+  },
+  "ipKind_business": {
+    "message": "Организация"
+  },
+  "ipKind_education": {
+    "message": "Образование"
+  },
+  "ipKind_government": {
+    "message": "Госорган"
+  },
+  "ipKind_other": {
+    "message": "Другое"
+  },
+  "errIpAnswer": {
+    "message": "неожиданный ответ сервиса IP"
+  },
+  "optGeo": {
+    "message": "Страны"
+  },
+  "geoOff": {
+    "message": "Не учитывать страны"
+  },
+  "geoOffHint": {
+    "message": "Решают только списки сайтов выше."
+  },
+  "geoDirect": {
+    "message": "Отмеченные страны — без VPN"
+  },
+  "geoDirectHint": {
+    "message": "Сайты, размещённые в отмеченных странах, открываются напрямую, все остальные страны идут через VPN."
+  },
+  "geoVpn": {
+    "message": "Через VPN — только отмеченные страны"
+  },
+  "geoVpnHint": {
+    "message": "Сайты, размещённые в отмеченных странах, идут через VPN, все остальные страны открываются напрямую."
+  },
+  "geoSearch": {
+    "message": "Найти страну…"
+  },
+  "geoOnlySelected": {
+    "message": "Только отмеченные"
+  },
+  "geoClear": {
+    "message": "Снять все"
+  },
+  "geoNothing": {
+    "message": "Ничего не найдено."
+  },
+  "geoSelected": {
+    "message": "Отмечено: $1 — $2"
+  },
+  "geoNoneSelected": {
+    "message": "Страны не отмечены."
+  },
+  "geoDbOk": {
+    "message": "База адресов по странам: $1 диапазонов, обновлена $2."
+  },
+  "geoDbMissing": {
+    "message": "База адресов по странам ещё не загружена."
+  },
+  "geoUpdate": {
+    "message": "Обновить базу"
+  },
+  "geoUpdating": {
+    "message": "Загрузка…"
+  },
+  "geoHint": {
+    "message": "Сайты из списков выше всегда идут по спискам; страны действуют на все остальные сайты. Чтобы узнать страну сайта, расширение спрашивает его адрес у выбранного выше DNS-сервиса. Запрос (DNS-over-HTTPS) идёт внутри туннеля VPN, поэтому ваш провайдер этих имён не видит; DNS-сервис видит их с адреса вашего VPN-сервера. Свой сервер должен поддерживать DNS-over-HTTPS (AdGuard Home, личный адрес AdGuard DNS и т. п.). Если страну определить не удалось или туннель не работает, решает режим маршрутизации выше. Учитывается только IPv4. База (около 8 МБ, ip-location-db) скачивается с cdn.jsdelivr.net по кнопке «Обновить базу»."
+  },
+  "toastGeoUpdated": {
+    "message": "База стран обновлена: $1 диапазонов"
+  },
+  "errGeoHttp": {
+    "message": "HTTP $1"
+  },
+  "errGeoDownload": {
+    "message": "Не удалось скачать базу стран: $1"
+  },
+  "errGeoFormat": {
+    "message": "Скачанная база стран пуста или повреждена."
+  },
+  "optStats": {
+    "message": "Статистика"
+  },
+  "statsUrlLabel": {
+    "message": "Адрес страницы статистики"
+  },
+  "statsHint": {
+    "message": "Если адрес задан, в окне расширения появится кнопка «Статистика», которая открывает эту страницу — например, ваш кабинет в TrustPanel, веб-панели для серверов TrustTunnel:"
+  },
+  "errStatsUrl": {
+    "message": "Адрес статистики должен начинаться с http:// или https://"
+  },
+  "optRemember": {
+    "message": "Сохранять VPN-вкладки после перезапуска"
+  },
+  "rememberHint": {
+    "message": "Без этого отмеченная вкладка, которую Firefox восстановил после перезапуска (или через «Восстановить закрытую вкладку»), откроется без VPN. Чтобы хранить отметку вместе с вкладкой, расширению нужно разрешение Firefox «Доступ к недавно закрытым вкладкам». Расширение хранит только отметку «да/нет» у вкладки и не читает ваши закрытые вкладки и историю."
+  },
+  "rememberAllow": {
+    "message": "Разрешить"
+  },
+  "rememberOn": {
+    "message": "✓ Отмеченные вкладки сохраняют VPN после перезапуска."
+  },
+  "rememberOff": {
+    "message": "Пока не разрешено: отметки действуют до закрытия Firefox."
+  },
+  "toastRememberOn": {
+    "message": "VPN-вкладки теперь переживут перезапуск"
+  },
+  "toastRememberDenied": {
+    "message": "Разрешение не выдано"
+  },
+  "popupTabNotKept": {
+    "message": "После перезапуска Firefox эта вкладка откроется без VPN. Чтобы сохранить: Настройки → «Сохранять VPN-вкладки после перезапуска»."
+  },
+  "geoDnsLabel": {
+    "message": "DNS-сервис (запросы идут через VPN):"
+  },
+  "geoDnsCustom": {
+    "message": "Свой сервер…"
+  },
+  "geoDnsUrlLabel": {
+    "message": "Адрес вашего сервера DNS-over-HTTPS"
+  },
+  "errDnsUrl": {
+    "message": "Укажите адрес своего DNS-сервера: он должен начинаться с https:// (DNS-over-HTTPS, RFC 8484), например https://dns.example.com/dns-query"
   }
 }

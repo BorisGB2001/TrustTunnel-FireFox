@@ -6,12 +6,25 @@ const TTRules = (() => {
   function normalizeEntry(raw) {
     let s = String(raw || "").trim().toLowerCase();
     if (!s || s.startsWith("#")) return "";
-    if (/^\d{1,3}(\.\d{1,3}){3}\/\d{1,2}$/.test(s)) return s; // IPv4 CIDR
-    s = s.replace(/^[a-z]+:\/\//, "").replace(/[/?#].*$/, "");
+    const cidr = /^(\d{1,3}(?:\.\d{1,3}){3})\/(\d{1,2})$/.exec(s);
+    if (cidr) return ipv4ToInt(cidr[1]) !== null && Number(cidr[2]) <= 32 ? s : ""; // IPv4 CIDR
+    if (/^\[?[0-9a-f:.]+\]?\/\d+$/.test(s)) return ""; // any other "address/prefix" (IPv6 CIDR) is not supported
+    s = s.replace(/^[a-z][a-z0-9+.-]*:\/\//, "").replace(/[/?#].*$/, "");
+    s = s.replace(/^[^@]*@/, ""); // user:pass@host
     s = s.replace(/^\*\./, "").replace(/^\./, "");
-    if (/^\[.*\]$/.test(s)) s = s.slice(1, -1);
-    else if (/^[^:]+:\d+$/.test(s)) s = s.replace(/:\d+$/, "");
-    return s;
+    if (!s) return "";
+    // The URL parser gives the form request hosts arrive in: punycode for IDN,
+    // no port, canonical IPv6. Anything it rejects cannot match a host anyway.
+    try {
+      s = new URL("http://" + s).hostname;
+    } catch (_) {
+      try {
+        s = new URL("http://[" + s + "]").hostname; // bare IPv6
+      } catch (_e) {
+        return "";
+      }
+    }
+    return s.replace(/^\[|\]$/g, "").replace(/\.$/, "");
   }
 
   function parseList(text) {
@@ -86,12 +99,46 @@ const TTRules = (() => {
     return !matchesList(host, settings.excludeList);
   }
 
+  /** Is the host named in the site list of the current mode (an explicit choice)? */
+  function isExplicit(host, settings) {
+    return settings.mode === "include" ? matchesList(host, settings.includeList) : matchesList(host, settings.excludeList);
+  }
+
+  const cleanHost = (host) => String(host || "").toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  const geoOn = (settings) => settings.geoMode === "direct" || settings.geoMode === "vpn";
+
+  /** Does routing this host need its country (GEO on and no rule decides earlier)? */
+  function needsCountry(host, settings) {
+    host = cleanHost(host);
+    if (!geoOn(settings)) return false;
+    if (settings.bypassLocal !== false && isLocal(host)) return false;
+    return !isExplicit(host, settings);
+  }
+
+  /**
+   * Full decision: local hosts, then the site lists (explicit entries win), then
+   * countries, then the default of the mode.
+   * settings.geoMode: "direct" — listed countries go direct, the rest via VPN;
+   *                   "vpn"    — only listed countries via VPN, the rest direct.
+   * country: ISO code of the host's server, or null when unknown.
+   */
+  function route(host, settings, country) {
+    host = cleanHost(host);
+    if (settings.bypassLocal !== false && isLocal(host)) return false;
+    if (isExplicit(host, settings)) return settings.mode === "include";
+    if (geoOn(settings) && country) {
+      const listed = Array.isArray(settings.geoCountries) && settings.geoCountries.includes(country);
+      return settings.geoMode === "vpn" ? listed : !listed;
+    }
+    return settings.mode !== "include";
+  }
+
   /** Registrable-ish domain for "add this site": drops a leading "www.". */
   function siteOf(host) {
     return String(host || "").toLowerCase().replace(/^www\./, "");
   }
 
-  return { normalizeEntry, parseList, isLocal, matches, matchesList, shouldTunnel, siteOf };
+  return { normalizeEntry, parseList, ipv4ToInt, isLocal, matches, matchesList, shouldTunnel, isExplicit, needsCountry, route, siteOf };
 })();
 
 if (typeof module !== "undefined") module.exports = TTRules;

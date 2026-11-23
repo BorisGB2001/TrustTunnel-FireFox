@@ -260,12 +260,6 @@
   "toastListUpdated": {
     "message": "List updated. Reload the tab to apply."
   },
-  "toastIpVpn": {
-    "message": "External IP: $1 (via VPN)"
-  },
-  "toastIpDirect": {
-    "message": "External IP: $1 (direct)"
-  },
   "toastIpFailed": {
     "message": "Could not check the IP: $1"
   },
@@ -589,5 +583,179 @@
   },
   "hotkeysHint": {
     "message": "Change them: about:addons → ⚙ → Manage Extension Shortcuts."
+  },
+  "privNotCovered": {
+    "message": "Private windows are not covered: the add-on is not allowed there, so they bypass the VPN and the kill switch. about:addons → TrustTunnel → “Run in Private Windows” → Allow."
+  },
+  "popupStats": {
+    "message": "Statistics"
+  },
+  "ipWithVpn": {
+    "message": "With VPN"
+  },
+  "ipWithoutVpn": {
+    "message": "Without VPN"
+  },
+  "ipVpnOff": {
+    "message": "VPN is off"
+  },
+  "ipFailed": {
+    "message": "failed: $1"
+  },
+  "ipTabVpn": {
+    "message": "This tab uses the VPN address."
+  },
+  "ipTabDirect": {
+    "message": "This tab goes directly, without the VPN."
+  },
+  "ipInfoEnable": {
+    "message": "Show country, provider and address type (asks proxycheck.io about these two addresses)"
+  },
+  "ipKind_vpn": {
+    "message": "VPN"
+  },
+  "ipKind_proxy": {
+    "message": "Proxy"
+  },
+  "ipKind_tor": {
+    "message": "Tor"
+  },
+  "ipKind_hosting": {
+    "message": "Hosting"
+  },
+  "ipKind_residential": {
+    "message": "Home ISP"
+  },
+  "ipKind_wireless": {
+    "message": "Mobile"
+  },
+  "ipKind_business": {
+    "message": "Business"
+  },
+  "ipKind_education": {
+    "message": "Education"
+  },
+  "ipKind_government": {
+    "message": "Government"
+  },
+  "ipKind_other": {
+    "message": "Other"
+  },
+  "errIpAnswer": {
+    "message": "unexpected answer of the IP service"
+  },
+  "optGeo": {
+    "message": "Countries"
+  },
+  "geoOff": {
+    "message": "Do not use countries"
+  },
+  "geoOffHint": {
+    "message": "Only the site lists above decide."
+  },
+  "geoDirect": {
+    "message": "Selected countries without VPN"
+  },
+  "geoDirectHint": {
+    "message": "Sites hosted in the selected countries open directly, all other countries go via VPN."
+  },
+  "geoVpn": {
+    "message": "Only selected countries via VPN"
+  },
+  "geoVpnHint": {
+    "message": "Sites hosted in the selected countries go via VPN, all other countries open directly."
+  },
+  "geoSearch": {
+    "message": "Find a country…"
+  },
+  "geoOnlySelected": {
+    "message": "Selected only"
+  },
+  "geoClear": {
+    "message": "Clear"
+  },
+  "geoNothing": {
+    "message": "Nothing found."
+  },
+  "geoSelected": {
+    "message": "Selected: $1 — $2"
+  },
+  "geoNoneSelected": {
+    "message": "No countries selected."
+  },
+  "geoDbOk": {
+    "message": "Country database: $1 ranges, updated $2."
+  },
+  "geoDbMissing": {
+    "message": "Country database is not downloaded yet."
+  },
+  "geoUpdate": {
+    "message": "Update database"
+  },
+  "geoUpdating": {
+    "message": "Downloading…"
+  },
+  "geoHint": {
+    "message": "Sites named in the lists above always follow the lists; countries apply to all other sites. To learn a site's country the add-on asks the DNS service chosen above for the site's address. The request (DNS over HTTPS) goes inside the VPN tunnel, so your provider does not see those names; the DNS service sees them coming from your VPN server. Your own server must support DNS over HTTPS (AdGuard Home, AdGuard DNS personal address, etc.). If the country cannot be determined — or the tunnel is down — the routing mode above decides. Only IPv4 is covered. The database (about 8 MB, ip-location-db) is downloaded from cdn.jsdelivr.net when you press “Update database”."
+  },
+  "toastGeoUpdated": {
+    "message": "Country database updated: $1 ranges"
+  },
+  "errGeoHttp": {
+    "message": "HTTP $1"
+  },
+  "errGeoDownload": {
+    "message": "Could not download the country database: $1"
+  },
+  "errGeoFormat": {
+    "message": "The downloaded country database is empty or damaged."
+  },
+  "optStats": {
+    "message": "Statistics"
+  },
+  "statsUrlLabel": {
+    "message": "Address of the statistics page"
+  },
+  "statsHint": {
+    "message": "If set, the popup shows a “Statistics” button that opens this page — for example your account in TrustPanel, a web panel for TrustTunnel servers:"
+  },
+  "errStatsUrl": {
+    "message": "The statistics address must start with http:// or https://"
+  },
+  "optRemember": {
+    "message": "Keep VPN tabs after a restart"
+  },
+  "rememberHint": {
+    "message": "Without this, a marked tab that Firefox restores after a restart (or with “Reopen closed tab”) opens without the VPN. To keep the mark with the tab, the add-on needs Firefox's permission “Access recently closed tabs”. It stores one yes/no mark per tab and does not read your closed tabs or history."
+  },
+  "rememberAllow": {
+    "message": "Allow"
+  },
+  "rememberOn": {
+    "message": "✓ Marked tabs keep the VPN after a restart."
+  },
+  "rememberOff": {
+    "message": "Not allowed yet: marks last until Firefox is closed."
+  },
+  "toastRememberOn": {
+    "message": "VPN tabs will now survive a restart"
+  },
+  "toastRememberDenied": {
+    "message": "Permission was not granted"
+  },
+  "popupTabNotKept": {
+    "message": "After a Firefox restart this tab will open without the VPN. To keep it: Settings → “Keep VPN tabs after a restart”."
+  },
+  "geoDnsLabel": {
+    "message": "DNS service (asked through the VPN):"
+  },
+  "geoDnsCustom": {
+    "message": "My own server…"
+  },
+  "geoDnsUrlLabel": {
+    "message": "Address of your DNS-over-HTTPS server"
+  },
+  "errDnsUrl": {
+    "message": "Enter the address of your DNS server: it must start with https:// (DNS over HTTPS, RFC 8484), for example https://dns.example.com/dns-query"
   }
 }

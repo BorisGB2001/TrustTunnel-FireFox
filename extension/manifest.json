@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "homepage_url": "https://github.com/BorisGB2001/TrustTunnel-FireFox",
@@ -21,6 +21,9 @@
     "menus",
     "contextualIdentities"
   ],
+  "optional_permissions": [
+    "sessions"
+  ],
   "host_permissions": [
     "<all_urls>"
   ],
@@ -29,6 +32,8 @@
       "lib/i18n.js",
       "lib/rules.js",
       "lib/scope.js",
+      "lib/geo.js",
+      "lib/doh.js",
       "lib/config.js",
       "background.js"
     ]

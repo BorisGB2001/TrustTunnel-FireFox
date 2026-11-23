@@ -9,7 +9,8 @@
 <body>
   <header class="row">
     <img src="../icons/icon-on.svg" width="22" height="22" alt="">
-    <strong class="grow">TrustTunnel</strong>
+    <strong>TrustTunnel</strong>
+    <span class="grow small muted" id="version"></span>
     <label class="switch" data-i18n-title="popupToggleTitle">
       <input type="checkbox" id="toggle">
       <span class="slider"></span>
@@ -74,8 +75,24 @@
     <div><span class="muted small" data-i18n="statConnected"></span><br><span id="since">—</span></div>
   </section>
 
+  <section class="ipbox" id="ipBox" hidden>
+    <div class="iprow" id="ipVpnRow">
+      <div class="small muted" data-i18n="ipWithVpn"></div>
+      <div class="row"><span class="grow ip" id="ipVpn"></span><span class="pill" id="ipVpnKind" hidden></span></div>
+      <div class="small muted" id="ipVpnSub" hidden></div>
+    </div>
+    <div class="iprow">
+      <div class="small muted" data-i18n="ipWithoutVpn"></div>
+      <div class="row"><span class="grow ip" id="ipDirect"></span><span class="pill" id="ipDirectKind" hidden></span></div>
+      <div class="small muted" id="ipDirectSub" hidden></div>
+    </div>
+    <div class="small" id="ipTab" hidden></div>
+    <button type="button" id="ipInfoBtn" class="link" data-i18n="ipInfoEnable" hidden></button>
+  </section>
+
   <footer class="row">
     <button type="button" id="ipBtn" data-i18n="popupCheckIp"></button>
+    <button type="button" id="statsBtn" data-i18n="popupStats" hidden></button>
     <span class="grow"></span>
     <button type="button" id="optBtn" data-i18n="popupSettings"></button>
   </footer>
@@ -83,6 +100,7 @@
   <script src="../lib/i18n.js"></script>
   <script src="../lib/rules.js"></script>
   <script src="../lib/scope.js"></script>
+  <script src="../lib/geo.js"></script>
   <script src="../lib/api.js"></script>
   <script src="../lib/toast.js"></script>
   <script src="popup.js"></script>

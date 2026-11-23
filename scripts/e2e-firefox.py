@@ -346,7 +346,132 @@ def run_fake(firefox):
         r.check(a not in st["vpnTabs"], "closing a tab removes it from the VPN list")
 
         # IP check from the popup is routed as that tab.
-        r.check(r.call("checkIp", tab={"tabId": b})["viaVpn"] is False, "Check IP for a direct tab reports direct")
+        r.check(r.call("checkIp", tab={"tabId": b}, host="example.org")["tabVia"] == "direct", "Check IP for a direct tab reports direct")
+
+        # Check IP: one request through the server, one forced direct (not seen by the server).
+        before = srv.log.count("api.ipify.org")
+        ipr = r.call("checkIp", tab={"tabId": b}, host="example.org")
+        print("checkIp:", {k: (v and (v.get("ip") or v.get("error"))) if isinstance(v, dict) else v for k, v in ipr.items()})
+        r.check(ipr["vpn"] and ipr["vpn"].get("ip") and ipr["direct"].get("ip"), "Check IP returns the address with VPN and without it")
+        # The earlier check may have left a tunnel to ipify open, so a new CONNECT is optional;
+        # what matters: the VPN request used the server at least once, the direct one never did.
+        r.check(srv.log.count("api.ipify.org") >= 1 and srv.log.count("api.ipify.org") - before <= 1,
+                "the VPN request went through the server, the direct one did not")
+        r.check(ipr["ipInfo"] is False and "info" not in ipr["direct"], "no IP details are requested unless enabled")
+
+        # Countries: download the database, then send one country direct and the rest via VPN.
+        st = r.call("geoUpdate")
+        meta = st["settings"]["geoMeta"]
+        print("Country database:", meta and meta["count"], "ranges")
+        r.check(meta and meta["count"] > 50000, "country database downloaded")
+        r.call("setSettings", patch={"scope": "all", "excludeList": [], "geoMode": "direct", "geoCountries": []})
+        found = {}
+        for h in ("ya.ru", "www.rki.de", "www.jaist.ac.jp", "www.iana.org", "www.uio.no"):
+            c = r.call("routeInfo", host=h)["country"]
+            print("  country of", h, "=", c)
+            if c and c not in found.values():
+                found[h] = c
+        hosts = list(found)
+        r.check(srv.seen("cloudflare-dns.com"), "site names are resolved through the VPN (DNS over HTTPS via the server)")
+        # The DNS service is a setting: Google, then a custom URL (AdGuard's public server).
+        r.call("setSettings", patch={"geoDns": "google"})
+        cg = r.call("routeInfo", host="www.kth.se")["country"]
+        r.check(cg and srv.seen("dns.google"), "Google DNS is used through the VPN (www.kth.se = %s)" % cg)
+        r.call("setSettings", patch={"geoDns": "custom", "geoDnsUrl": "https://unfiltered.adguard-dns.com/dns-query"})
+        ca = r.call("routeInfo", host="www.kth.se")["country"]
+        r.check(ca == cg and srv.seen("unfiltered.adguard-dns.com"), "a custom DNS-over-HTTPS server is used through the VPN")
+        try:
+            r.call("setSettings", patch={"geoDns": "custom", "geoDnsUrl": "http://dns.example/dns-query"})
+            r.check(False, "a custom DNS address without https is rejected")
+        except RuntimeError:
+            r.check(True, "a custom DNS address without https is rejected")
+        r.call("setSettings", patch={"geoDns": "cloudflare", "geoDnsUrl": ""})
+        if len(hosts) < 2:
+            r.check(False, "need two test sites in different countries (DNS failed?)")
+        else:
+            ha, hb = hosts[0], hosts[1]
+            r.call("setSettings", patch={"geoCountries": [found[ha]]})
+            na, nb = srv.log.count(ha), srv.log.count(hb)
+            ta = r.open_tab("https://%s/" % ha)
+            tb = r.open_tab("https://%s/" % hb)
+            time.sleep(1)
+            r.check(srv.log.count(ha) == na, "site in a selected country goes direct (%s, %s)" % (ha, found[ha]))
+            r.check(srv.log.count(hb) > nb, "site in another country goes via VPN (%s, %s)" % (hb, found[hb]))
+            r.call("setSettings", patch={"geoMode": "vpn"})
+            ri_a, ri_b = r.call("routeInfo", host=ha), r.call("routeInfo", host=hb)
+            r.check(ri_a["tunneled"] and not ri_b["tunneled"], "\"only selected countries via VPN\" flips the routes")
+            r.call("setSettings", patch={"geoMode": "direct", "excludeList": [hb]})
+            r.check(not r.call("routeInfo", host=hb)["tunneled"], "exclusion list beats the country")
+            r.ext("await browser.tabs.remove(args.ids);", ids=[ta, tb])
+        r.call("setSettings", patch={"geoMode": "off", "excludeList": [], "scope": "tabs"})
+        st = r.call("setSettings", patch={"statsUrl": "https://panel.example.com/portal"})
+        r.check(st["settings"]["statsUrl"] == "https://panel.example.com/portal" and st["version"], "statistics URL saved, version reported")
+        try:
+            r.call("setSettings", patch={"statsUrl": "javascript:alert(1)"})
+            r.check(False, "bad statistics URL is rejected")
+        except RuntimeError:
+            r.check(True, "bad statistics URL is rejected")
+
+        # "sessions" is optional (asked for in Settings): grant it the way that click would.
+        r.m.cmd("Marionette:SetContext", {"value": "chrome"})
+        granted = r.m.js("""const done = arguments[arguments.length - 1];
+                  const { ExtensionPermissions } = ChromeUtils.importESModule("resource://gre/modules/ExtensionPermissions.sys.mjs");
+                  const ext = WebExtensionPolicy.getByID(arguments[0]).extension;
+                  ExtensionPermissions.add(arguments[0], { permissions: ["sessions"], origins: [] }, ext)
+                    .then(() => done(true), e => done(String(e)));""", r.addon_id, async_=True)
+        r.m.cmd("Marionette:SetContext", {"value": "content"})
+        r.options()
+        time.sleep(1)
+        r.check(granted is True and r.ext("return await browser.permissions.contains({permissions: ['sessions']});"),
+                "optional \"sessions\" permission granted")
+        # A mark lives in the tab's own session data: it comes back with a restored tab...
+        t1 = r.open_tab("https://example.com/")
+        r.call("setTabVpn", tabId=t1, value=True)
+        r.ext("await browser.tabs.remove(args.id);", id=t1)
+        time.sleep(1)
+        t2 = r.ext("""
+            const s = await browser.sessions.restore();
+            const id = s.tab.id;
+            for (let i = 0; i < 100; i++) {
+              if ((await browser.tabs.get(id)).status === "complete") break;
+              await new Promise(r => setTimeout(r, 100));
+            }
+            return id;""")
+        time.sleep(1)
+        r.check(t2 != t1 and t2 in r.call("getState")["vpnTabs"], "\"undo close tab\" brings the VPN mark back")
+        n = srv.log.count("www.uio.no")
+        r.ext("""await browser.tabs.update(args.id, {url: "https://www.uio.no/"});
+                 for (let i = 0; i < 150; i++) {
+                   const t = await browser.tabs.get(args.id);
+                   if (t.status === "complete" && t.url.includes("uio.no")) break;
+                   await new Promise(r => setTimeout(r, 100));
+                 }""", id=t2)
+        r.check(srv.log.count("www.uio.no") > n, "the restored tab goes through the VPN")
+
+        # ...and survives a restart: reloading the add-on wipes storage.session, like a
+        # browser restart does, so the mark can only come from the tab itself.
+        t3 = r.open_tab("https://example.org/")  # an unmarked neighbour
+        r.m.cmd("Marionette:SetContext", {"value": "chrome"})
+        r.m.js("""const done = arguments[arguments.length - 1];
+                  const { AddonManager } = ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");
+                  AddonManager.getAddonByID(arguments[0]).then(a => a.reload()).then(() => done(true), e => done(String(e)));""",
+               r.addon_id, async_=True)
+        r.m.cmd("Marionette:SetContext", {"value": "content"})
+        time.sleep(2)
+        r.m.cmd("WebDriver:SwitchToWindow", {"handle": r.m.cmd("WebDriver:GetWindowHandles")[0], "focus": False})
+        r.options()
+        time.sleep(1)
+        marks = r.call("getState")["vpnTabs"]
+        r.check(t2 in marks and t3 not in marks, "after a restart the marked tab is still a VPN tab, the neighbour is not")
+        r.call("refresh")
+        n = srv.log.count("www.rki.de")
+        r.ext("""await browser.tabs.update(args.id, {url: "https://www.rki.de/"});
+                 for (let i = 0; i < 150; i++) {
+                   const t = await browser.tabs.get(args.id);
+                   if (t.status === "complete" && t.url.includes("rki.de")) break;
+                   await new Promise(r => setTimeout(r, 100));
+                 }""", id=t2)
+        r.check(srv.log.count("www.rki.de") > n, "after a restart the marked tab still goes through the VPN")
 
         # Wrong password -> error, VPN tab does not leak.
         pid = r.call("getState")["settings"]["profileId"]
@@ -384,10 +509,11 @@ def run_live(firefox, keyfile):
         r.check(rt["status"] == "on", "tunnel is up")
         ipinfo = r.call("checkIp")
         print("checkIp:", ipinfo)
-        r.check(ipinfo["ip"] != direct_ip and ipinfo["viaVpn"], "extension IP differs from direct IP")
+        r.check(ipinfo["vpn"]["ip"] != direct_ip and ipinfo["direct"]["ip"] == direct_ip and ipinfo["tabVia"] == "vpn",
+                "Check IP: VPN address differs, direct address is the real one")
         r.m.cmd("WebDriver:Navigate", {"url": "https://api.ipify.org/"})
         tab_ip = r.m.js("return document.body.innerText.trim()")
-        r.check(tab_ip == ipinfo["ip"], "tab goes through the VPN")
+        r.check(tab_ip == ipinfo["vpn"]["ip"], "tab goes through the VPN")
         r.options()
         r.call("setSettings", patch={"excludeList": ["api.ipify.org"]})
         r.m.cmd("WebDriver:Navigate", {"url": "https://api.ipify.org/?x=1"})
