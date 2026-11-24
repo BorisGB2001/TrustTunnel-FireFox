@@ -54,7 +54,7 @@
     "message": "The server does not respond (timeout). The port may be blocked on the way."
   },
   "hintTlsReset": {
-    "message": "The server dropped the TLS connection. Possible causes: the hostname does not match the server SNI, client_random rules are enabled on the server, or http1/http2 is disabled."
+    "message": "The connection to the server was reset during the TLS handshake. Most often this network's provider or an antivirus that inspects HTTPS blocks the server: try another network. Server-side causes: the hostname does not match the SNI, client_random rules are enabled, or http1/http2 is disabled."
   },
   "hintBadGateway": {
     "message": "The server could not reach the site (error on the VPN server side)."
@@ -604,6 +604,9 @@
   },
   "ipTabVpn": {
     "message": "This tab uses the VPN address."
+  },
+  "ipTabVpnDown": {
+    "message": "This tab is set to use the VPN, but the VPN is not working now."
   },
   "ipTabDirect": {
     "message": "This tab goes directly, without the VPN."

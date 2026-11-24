@@ -1,4 +1,8 @@
+/* Firefox cuts a popup taller than 600px (less on small screens): scroll instead of losing the buttons. */
+html { max-height: 600px; overflow-y: auto; scrollbar-width: thin; }
 body { width: 340px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+body > * { flex: none; }
+#ipTab.bad { color: var(--err); font-weight: 600; }
 header img { flex: none; }
 header strong { font-size: 16px; }
 

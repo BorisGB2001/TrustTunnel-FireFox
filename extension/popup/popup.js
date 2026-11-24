@@ -245,9 +245,13 @@ async function checkIp() {
     showIp("ipDirect", res.direct);
     const tabLine = $("ipTab");
     tabLine.hidden = !res.tabVia;
-    if (res.tabVia) tabLine.textContent = t(res.tabVia === "vpn" ? "ipTabVpn" : "ipTabDirect");
+    // "Uses the VPN address" only when the VPN check itself succeeded.
+    const vpnOk = !!(res.vpn && res.vpn.ip);
+    if (res.tabVia) tabLine.textContent = t(res.tabVia !== "vpn" ? "ipTabDirect" : vpnOk ? "ipTabVpn" : "ipTabVpnDown");
+    tabLine.classList.toggle("bad", res.tabVia === "vpn" && !vpnOk);
     $("ipInfoBtn").hidden = res.ipInfo;
-    if ((res.vpn && res.vpn.error) || res.direct.error) Toast.error(t("toastIpFailed", (res.vpn && res.vpn.error) || res.direct.error));
+    // The errors are shown in the box itself: no toast over the status. Keep the buttons in view.
+    $("ipBtn").scrollIntoView({ block: "nearest" });
   } catch (err) {
     Toast.error(t("toastIpFailed", err.message));
   } finally {

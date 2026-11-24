@@ -20,11 +20,11 @@ Copy these texts into the Developer Hub form (descriptions are Markdown) (addons
 
 ## Summary (en-US, ≤ 250 characters)
 
-Browser-only VPN client for your own TrustTunnel (AdGuard) server. Import a tt:// key, route Firefox through your server as an HTTPS proxy, choose which sites go through the VPN. Unofficial, open source.
+Browser-only VPN client for your own TrustTunnel (AdGuard) server. Import a tt:// key and choose what goes through the VPN: sites, tabs, containers, private windows or countries. Unofficial, open source.
 
 ## Summary (ru)
 
-VPN-клиент для вашего сервера TrustTunnel (AdGuard), только для браузера. Импортируйте ключ tt://, и Firefox пойдёт через ваш сервер как через HTTPS-прокси. Выбирайте, какие сайты идут через VPN. Неофициальный, открытый код.
+VPN-клиент для вашего сервера TrustTunnel (AdGuard), только для браузера. Импортируйте ключ tt:// и выбирайте, что идёт через VPN: сайты, вкладки, контейнеры, приватные окна или страны. Неофициальный, открытый код.
 
 ## Description (en-US)
 
@@ -38,6 +38,7 @@ TrustTunnel Browser Client connects Firefox to your own TrustTunnel server — t
 - Several servers, switchable from the toolbar
 - Split tunneling: everything except a list, or only listed sites; domains, IPs and subnets; one click to send the current site directly or via VPN
 - VPN only in marked tabs (popup switch, hotkey, "Open link in a VPN tab"), only in private windows, or containers that always use the VPN
+- Marked tabs keep the VPN after a browser restart and when you reopen a closed tab
 - Routing by country: selected countries without VPN, or only selected countries via VPN
 - Check IP: your address with the VPN and without it, optionally with country, provider and address type
 - Toolbar icon menu: VPN on/off, VPN in this tab, switch server; hotkeys
@@ -67,6 +68,7 @@ TrustTunnel — клиент для браузера подключает Firefo
 - Несколько серверов с переключением с панели инструментов
 - Раздельное туннелирование: всё, кроме списка, или только сайты из списка; домены, IP и подсети; текущий сайт — напрямую или через VPN одним нажатием
 - VPN только в отмеченных вкладках (переключатель, горячая клавиша, «Открыть ссылку во вкладке с VPN»), только в приватных окнах или в выбранных контейнерах
+- Отмеченные вкладки сохраняют VPN после перезапуска браузера и при восстановлении закрытой вкладки
 - Маршрутизация по странам: отмеченные страны без VPN или через VPN только отмеченные страны
 - Проверка IP: адрес с VPN и без VPN, по желанию — страна, провайдер и тип адреса
 - Меню значка: вкл/выкл VPN, VPN в этой вкладке, выбор сервера; горячие клавиши
@@ -104,6 +106,14 @@ Routing by country: tick countries that should open without the VPN (or the only
 
 Маршрутизация по странам: отметьте страны, которые открываются без VPN (или единственные, что идут через VPN); списки сайтов по-прежнему важнее. «Проверить IP» показывает адрес с VPN и без VPN, по желанию — страну, провайдера и тип адреса. Кнопка «Статистика». Вкладки с отметкой «VPN в этой вкладке» сохраняют VPN после перезапуска браузера и при восстановлении закрытой вкладки. Версия видна в настройках. Исправления: предупреждение о приватных окнах в любом режиме, кириллические домены в списках, зависание на повреждённом TOML, запросы без вкладки в VPN-контейнерах, надёжнее обработка ошибок маршрутизации.
 
+## Release notes 1.2.3 (en-US)
+
+Fixes in the toolbar popup: when the VPN is not working, "Check IP" no longer says the tab uses the VPN address; the popup scrolls on small screens instead of cutting off its buttons; the "connection reset" error now names the most common cause (the server is blocked by the network provider or an antivirus).
+
+## Release notes 1.2.3 (ru)
+
+Исправления во всплывающем окне: если VPN не работает, «Проверить IP» больше не пишет, что вкладка выходит с адреса VPN; на небольших экранах окно прокручивается, а не обрезает кнопки; ошибка «соединение оборвано» теперь называет самую частую причину (сервер блокирует провайдер сети или антивирус).
+
 ## Notes to reviewer (en-US) — "Notes for Reviewers" field
 
 This add-on is a client for TrustTunnel (https://github.com/TrustTunnel/TrustTunnel), an open-source VPN protocol by AdGuard. TrustTunnel is HTTP CONNECT over TLS with Basic auth, so the add-on uses `proxy.onRequest` to return `{type: "https", host, port, proxyAuthorizationHeader}` pointing to the user's own server.
@@ -111,7 +121,7 @@ This add-on is a client for TrustTunnel (https://github.com/TrustTunnel/TrustTun
 Permissions:
 - `proxy`, `<all_urls>` — route browser requests through the user's server.
 - `webRequest`, `webRequestBlocking`, `webRequestAuthProvider` — answer a 407 proxy challenge with the saved credentials; read the network error code of our own health-check request.
-- `privacy` — set `webRTCIPHandlingPolicy` while the VPN is on.
+- `privacy` — set `webRTCIPHandlingPolicy` and `networkPredictionEnabled` (false) while the VPN is on, so WebRTC and prefetch do not bypass the tunnel; both are cleared when the VPN is off.
 - `storage` — server list and settings, local only.
 - `alarms` — the health check every 30 s.
 - `tabs` — show the current site's route in the popup; track which tabs are marked "VPN in this tab" (per-tab badge, closed tabs are forgotten).
@@ -125,9 +135,8 @@ No remote code, no minified or bundled code, no analytics. Network requests made
 - `https://proxycheck.io/v3/<ip>` — only after the user opts in from the popup (setting `ipInfo`, off by default): country, provider and type of the two addresses shown by "Check IP".
 - `https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country/geo-whois-asn-country-ipv4-num.csv` — only when the user presses "Update database": data only (CSV of IP ranges and country codes), parsed into typed arrays and kept in IndexedDB; no code is loaded.
 - DNS over HTTPS (RFC 8484, `?dns=<query>`) to the service chosen in Settings — `https://cloudflare-dns.com/dns-query` (default), `https://dns.google/dns-query`, `https://unfiltered.adguard-dns.com/dns-query` or the user's own https URL — only while the user has routing by country on: the site's IPv4 address is looked up in the country database. The request is forced through the user's tunnel, never sent directly.
-- `privacy.network.networkPredictionEnabled` is set to false while the VPN is on, so prefetch does not bypass the tunnel.
 
-Testing requires a TrustTunnel server (installation: `curl -fsSL https://raw.githubusercontent.com/TrustTunnel/TrustTunnel/refs/heads/master/scripts/install.sh | sh -s -`, then `setup_wizard`). The tt:// and TOML parsers and the tab/private/container routing can be checked without a server: `node scripts/test-config.js`, `node scripts/test-scope.js` and `node scripts/test-geo.js` in the repository; `python3 scripts/e2e-firefox.py --fake` runs Firefox against a local fake TrustTunnel server.
+Testing requires a TrustTunnel server (installation: `curl -fsSL https://raw.githubusercontent.com/TrustTunnel/TrustTunnel/refs/heads/master/scripts/install.sh | sh -s -`, then `setup_wizard`). The tt:// and TOML parsers and the tab/private/container routing can be checked without a server: `node scripts/test-config.js`, `node scripts/test-scope.js` and `node scripts/test-geo.js` in the repository; `python3 scripts/e2e-firefox.py --fake` runs Firefox against a local fake TrustTunnel server. Source: https://github.com/BorisGB2001/TrustTunnel-FireFox (commit 1b5d692 for 1.2.2).
 
 ## Images
 
